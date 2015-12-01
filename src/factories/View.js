@@ -26,10 +26,23 @@ function View(options = {}) {
     },
     holder: {
       value: options.holder
+    },
+    static: {
+      value: options.static
     }
   };
 
-  return Object.create(View.prototype, props);
+  const view = Object.create(View.prototype, props);
+
+  view._display = 'block';
+
+  if (options.static === true) {
+    View.staticViews[options.name] = view;
+    view.render();
+    view.hide();
+  }
+
+  return view;
 }
 
 /**
@@ -42,14 +55,22 @@ function View(options = {}) {
 View.riot = riot;
 
 /**
+ *
+ * @type Object
+ */
+View.staticViews = {};
+
+/**
  * Default properties of {@link View}s, these may be overridden
  * @memberof View
  * @static
  * @type Object
  * @property {String} [holder='body'] - Default holder
+ * @property {String} [static=false] - Whether the view is static
  */
 View.defaults = {
-  holder: 'body'
+  holder: 'body',
+  static: false
 };
 
 View.prototype = {
@@ -94,7 +115,8 @@ View.prototype = {
    * @instance
    */
   hide() {
-    this.$el.hide();
+    this._display = this.el.style.display;
+    this.el.style.display = 'none';
   },
 
   /**
@@ -104,7 +126,7 @@ View.prototype = {
    * @instance
    */
   show() {
-    this.$el.show();
+    this.el.style.display = this._display;
   },
 
   /**
@@ -121,6 +143,7 @@ View.prototype = {
       const $el = $(emptyTag(this.tag));
       $el.appendTo(this.$holder);
       this.tagInstance = riot.mount($el[0], this.tag, data)[0];
+      this._display = this.el.style.display ;
     } else {
       this.sync(data);
       this.show();

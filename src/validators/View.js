@@ -6,6 +6,10 @@ import $ from 'jquery';
 const ViewValidator = {
 
   construct(options = {}) {
+    if (options.static && (!options.name || typeof options.name !== 'string')) {
+      throw new Error(`Can't construct static view, no name specified`);
+    }
+
     if (!options.tag || typeof options.tag !== 'string') {
       throw new Error(`Can't construct view, no tag specified`);
     }
