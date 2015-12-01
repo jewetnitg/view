@@ -1,7 +1,7 @@
 {
-  "name": "frontend-communicator",
-  "version": "0.0.9",
-  "description": "frontend-communicator is a modular browserify module that serves as an interface to the server, representing server controllers as functions that return Promises. Server communications are abstracted using Requests, Connections and Adapters, where Adapters perform that actual transport of data between the client and server. Connections are a combination of a url and an Adapter, a Request is combination of various properties including but not limited to a Connection, route and method.",
+  "name": "frontend-view",
+  "version": "0.0.1",
+  "description": "frontend-view serves to make creating views easier. it uses riot js to do so.",
   "main": "index.js",
   "scripts": {
     "build": "gulp build",
@@ -94,17 +94,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com:jewetnitg/communicator.git"
+    "url": "git+ssh://git@github.com:jewetnitg/view.git"
   },
   "keywords": [
-    "communicator",
-    "request",
-    "connection",
+    "view",
+    "riot",
     "browserify",
     "es6"
   ],
   "bugs": {
-    "url": "https://github.com/jewetnitg/communicator/issues"
+    "url": "https://github.com/jewetnitg/view/issues"
   },
-  "homepage": "https://github.com/jewetnitg/communicator#readme"
+  "homepage": "https://github.com/jewetnitg/view#readme"
 }
