@@ -19,7 +19,7 @@
     "default": {
       "outputSourceFiles": true
     },
-    "systemName": "COMMUNICATOR",
+    "systemName": "VIEW",
     "footer": "",
     "copyright": "Rik Hoffbauer 2015",
     "navType": "vertical",

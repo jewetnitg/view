@@ -14,6 +14,7 @@ import ViewValidator from '../validators/View';
  *
  * @property holder {String} jQuery selector, refers to the element this view should be appended to
  * @property tag {String} Refers to a riot tag
+ * @property static {Boolean} Indicates whether this is a static {@link View}
  */
 function View(options = {}) {
   _.defaults(options, View.defaults);
@@ -55,7 +56,10 @@ function View(options = {}) {
 View.riot = riot;
 
 /**
+ * All static {@link View}s will be put on here using their name as the key
  *
+ * @memberof View
+ * @static
  * @type Object
  */
 View.staticViews = {};
@@ -143,7 +147,7 @@ View.prototype = {
       const $el = $(emptyTag(this.tag));
       $el.appendTo(this.$holder);
       this.tagInstance = riot.mount($el[0], this.tag, data)[0];
-      this._display = this.el.style.display ;
+      this._display = this.el.style.display;
     } else {
       this.sync(data);
       this.show();
@@ -165,6 +169,7 @@ View.prototype = {
 
   /**
    * Removes the {@link View}
+   *
    * @method hide
    * @memberof View
    * @instance
