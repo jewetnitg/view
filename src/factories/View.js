@@ -48,10 +48,12 @@ function View(options = {}) {
 
 /**
  * Riot object the View uses, this should be used to run compiles, mounts etc.
+ * It may be overridden, but this should only done before any View is constructed.
+ *
  * @name riot
  * @memberof View
  * @static
- * @type {Object}
+ * @type {riot}
  */
 View.riot = riot;
 
@@ -146,7 +148,7 @@ View.prototype = {
     if (!this.tagInstance) {
       const $el = $(emptyTag(this.tag));
       $el.appendTo(this.$holder);
-      this.tagInstance = riot.mount($el[0], this.tag, data)[0];
+      this.tagInstance = View.riot.mount($el[0], this.tag, data)[0];
       this._display = this.el.style.display;
     } else {
       this.sync(data);
