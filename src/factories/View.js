@@ -11,7 +11,7 @@ import ViewValidator from '../validators/View';
  * @class View
  *
  * @param options {Object} Object containing the properties listed below
- *
+ * @property el {HTMLElement} Html element that is the (pre-rendered) element of this view
  * @property holder {String} jQuery selector, refers to the element this view should be appended to
  * @property tag {String} Refers to a riot tag
  * @property static {Boolean} Indicates whether this is a static {@link View}
@@ -25,11 +25,18 @@ function View(options = {}) {
     tag: {
       value: options.tag
     },
+    el: {
+      writable: true,
+      value: options.el
+    },
     holder: {
       value: options.holder
     },
     static: {
       value: options.static
+    },
+    options: {
+      value: options
     }
   };
 
@@ -80,17 +87,6 @@ View.defaults = {
 };
 
 View.prototype = {
-
-  /**
-   * The root element of this view
-   * @name el
-   * @memberof View
-   * @instance
-   * @type HTMLElement|null
-   */
-  get el() {
-    return this.tagInstance ? this.tagInstance.root : null;
-  },
 
   /**
    * The root element wrapped in jQuery
@@ -146,9 +142,16 @@ View.prototype = {
    */
   render(data = {}) {
     if (!this.tagInstance) {
-      const $el = $(emptyTag(this.tag));
-      $el.appendTo(this.$holder);
+      let $el;
+      if (this.el) {
+        $el = $(this.el);
+      } else {
+        $el = $(emptyTag(this.tag));
+        $el.appendTo(this.$holder);
+      }
+
       this.tagInstance = View.riot.mount($el[0], this.tag, data)[0];
+      this.el = this.tagInstance.root;
       this._display = this.el.style.display;
     } else {
       this.sync(data);
