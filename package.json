@@ -1,6 +1,6 @@
 {
   "name": "frontend-view",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "frontend-view serves to make creating views easier. it uses riot js to do so.",
   "main": "index.js",
   "scripts": {
