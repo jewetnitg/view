@@ -6,15 +6,20 @@ import $ from 'jquery';
 import riot from 'riot/riot+compiler';
 
 import ViewValidator from '../validators/View';
+import Adapter from './Adapter';
 
 /**
  * @class View
  *
  * @param options {Object} Object containing the properties listed below
+ *
  * @property el {HTMLElement} Html element that is the (pre-rendered) element of this view
  * @property holder {String} jQuery selector, refers to the element this view should be appended to
  * @property tag {String} Refers to a riot tag
  * @property static {Boolean} Indicates whether this is a static {@link View}
+ *
+ * @todo implement events
+ * @todo implement subViews
  */
 function View(options = {}) {
   _.defaults(options, View.defaults);
@@ -22,8 +27,11 @@ function View(options = {}) {
   ViewValidator.construct(options);
 
   const props = {
-    tag: {
-      value: options.tag
+    template: {
+      value: options.template
+    },
+    adapter: {
+      value: Adapter.adapters[options.adapter]
     },
     el: {
       writable: true,
@@ -31,6 +39,9 @@ function View(options = {}) {
     },
     holder: {
       value: options.holder
+    },
+    tagName: {
+      value: options.tagName
     },
     static: {
       value: options.static
@@ -42,8 +53,6 @@ function View(options = {}) {
 
   const view = Object.create(View.prototype, props);
 
-  view._display = 'block';
-
   if (options.static === true) {
     View.staticViews[options.name] = view;
     view.render();
@@ -54,17 +63,6 @@ function View(options = {}) {
 }
 
 /**
- * Riot object the View uses, this should be used to run compiles, mounts etc.
- * It may be overridden, but this should only done before any View is constructed.
- *
- * @name riot
- * @memberof View
- * @static
- * @type {riot}
- */
-View.riot = riot;
-
-/**
  * All static {@link View}s will be put on here using their name as the key
  *
  * @memberof View
@@ -72,6 +70,9 @@ View.riot = riot;
  * @type Object
  */
 View.staticViews = {};
+
+View.Adapter = Adapter;
+View.adapters = Adapter.adapters;
 
 /**
  * Default properties of {@link View}s, these may be overridden
@@ -83,6 +84,7 @@ View.staticViews = {};
  */
 View.defaults = {
   holder: 'body',
+  tagName: 'div',
   static: false
 };
 
@@ -117,8 +119,7 @@ View.prototype = {
    * @instance
    */
   hide() {
-    this._display = this.el.style.display;
-    this.el.style.display = 'none';
+    this.$el.hide();
   },
 
   /**
@@ -128,31 +129,40 @@ View.prototype = {
    * @instance
    */
   show() {
-    this.el.style.display = this._display;
+    this.$el.show();
   },
 
   /**
-   * Renders the riot tag to the DOM (into the $holder)
+   * Creates the HTML for an element and appends it to the holder, if the element already exists, this method reverts to {@link View#sync}, unless the force paramter is set to true
    *
    * @method render
    * @memberof View
    * @instance
    *
    * @param data {Object} Data to be made available to the riot tag
+   * @param [force=false] {Boolean} Whether to force a render, by default if already rendered, render reverts to {@link View#sync}.
    */
-  render(data = {}) {
-    if (!this.tagInstance) {
+  render(data = {}, force = false) {
+    if (!this._rendered || force === true) {
       let $el;
-      if (this.el) {
+
+      if (this.el && force !== true) {
         $el = $(this.el);
       } else {
-        $el = $(emptyTag(this.tag));
+        const html = this.adapter.makeHtml(this, data);
+
+        if (this.adapter.wrap) {
+          $el = $(Adapter.emptyTag(this.tagName));
+          $el.append(html);
+        } else {
+          $el = $(html);
+        }
+
         $el.appendTo(this.$holder);
       }
 
-      this.tagInstance = View.riot.mount($el[0], this.tag, data)[0];
-      this.el = this.tagInstance.root;
-      this._display = this.el.style.display;
+      this.el = this.adapter.initializeEl(this, $el, data) || $el[0];
+      this._rendered = true;
     } else {
       this.sync(data);
       this.show();
@@ -169,7 +179,11 @@ View.prototype = {
    * @param data {Object} Data for the riot tag, will be extended with the current data
    */
   sync(data = {}) {
-    this.tagInstance.update(data);
+    this.adapter.sync(this, data);
+
+    if (this.adapter.rebindEventsAfterSync) {
+      // @todo implement events
+    }
   },
 
   /**
@@ -180,15 +194,9 @@ View.prototype = {
    * @instance
    */
   remove() {
-    // @todo what do we do with the keepTheParent parameter
-    this.tagInstance.unmount();
-    this.$el.remove();
+    this.adapter.remove(this);
   }
 
 };
-
-function emptyTag(tagName) {
-  return `<${tagName}></${tagName}>`;
-}
 
 export default View;

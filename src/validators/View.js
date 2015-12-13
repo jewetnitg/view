@@ -2,6 +2,7 @@
  * @author rik
  */
 import $ from 'jquery';
+import Adapter from '../factories/Adapter';
 
 const ViewValidator = {
 
@@ -10,8 +11,16 @@ const ViewValidator = {
       throw new Error(`Can't construct static view, no name specified`);
     }
 
-    if (!options.tag || typeof options.tag !== 'string') {
-      throw new Error(`Can't construct view, no tag specified`);
+    if (!options.template || typeof options.template !== 'string') {
+      throw new Error(`Can't construct view, no template specified`);
+    }
+
+    if (!options.adapter || typeof options.adapter !== 'string') {
+      throw new Error(`Can't construct view, no adapter specified`);
+    }
+
+    if (!Adapter.adapters[options.adapter]) {
+      throw new Error(`Can't construct view, adapter ${options.adapter} doesn't exist`);
     }
 
     if (!(options.holder && typeof options.holder === 'string') && !(options.$holder && options.$holder.length)) {
