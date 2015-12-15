@@ -16,7 +16,6 @@ import Adapter from './Adapter';
  * @property el {HTMLElement} Html element that is the (pre-rendered) element of this view
  * @property holder {String} jQuery selector, refers to the element this view should be appended to
  * @property tag {String} Refers to a riot tag
- * @property static {Boolean} Indicates whether this is a static {@link View}
  *
  * @todo implement events
  * @todo implement subViews
@@ -43,33 +42,13 @@ function View(options = {}) {
     tagName: {
       value: options.tagName
     },
-    static: {
-      value: options.static
-    },
     options: {
       value: options
     }
   };
 
-  const view = Object.create(View.prototype, props);
-
-  if (options.static === true) {
-    View.staticViews[options.name] = view;
-    view.render();
-    view.hide();
-  }
-
-  return view;
+  return Object.create(View.prototype, props);
 }
-
-/**
- * All static {@link View}s will be put on here using their name as the key
- *
- * @memberof View
- * @static
- * @type Object
- */
-View.staticViews = {};
 
 View.Adapter = Adapter;
 View.adapters = Adapter.adapters;
@@ -80,12 +59,10 @@ View.adapters = Adapter.adapters;
  * @static
  * @type Object
  * @property {String} [holder='body'] - Default holder
- * @property {String} [static=false] - Whether the view is static
  */
 View.defaults = {
   holder: 'body',
-  tagName: 'div',
-  static: false
+  tagName: 'div'
 };
 
 View.prototype = {

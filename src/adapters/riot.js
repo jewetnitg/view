@@ -13,6 +13,7 @@ import Adapter from '../factories/Adapter';
 const riotAdapter = Adapter({
 
   name: 'riot',
+  wrap: false,
 
   makeHtml(view, data = {}) {
     return Adapter.emptyTag(view.template);
