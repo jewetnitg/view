@@ -2,6 +2,7 @@
  * @author rik
  */
 import _ from 'lodash';
+import AdapterValidator from '../validators/Adapter';
 
 /**
  * The {@link Adapter} class serves to abstract the actual rendering of {@link View}s.
@@ -30,43 +31,14 @@ function Adapter(options = {}) {
     remove: Adapter.prototype.remove
   });
 
-  if (!options.name || typeof options.name !== 'string') {
-    throw new Error(`Can't construct Adapter, no or invalid name provided.`);
-  }
+  AdapterValidator.construct(options);
 
-  if (!options.makeHtml || typeof options.makeHtml !== 'function') {
-    throw new Error(`Can't construct Adapter, no or invalid render method.`);
-  }
+  const adapter = Adapter.adapters[options.name] = Object.create(Adapter.prototype);
 
-  const props = {
+  _.extend(adapter, options);
+  adapter.options = options;
 
-    name: {
-      value: options.name
-    },
-
-    wrap: {
-      value: options.wrap
-    },
-
-    makeHtml: {
-      value: options.makeHtml
-    },
-
-    initializeEl: {
-      value: options.initializeEl
-    },
-
-    sync: {
-      value: options.sync
-    },
-
-    remove: {
-      value: options.remove
-    }
-
-  };
-
-  return Adapter.adapters[options.name] = Object.create(Adapter.prototype, props);
+  return adapter;
 }
 
 Adapter.adapters = {};

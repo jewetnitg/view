@@ -25,29 +25,14 @@ function View(options = {}) {
 
   ViewValidator.construct(options);
 
-  const props = {
-    template: {
-      value: options.template
-    },
-    adapter: {
-      value: Adapter.adapters[options.adapter]
-    },
-    el: {
-      writable: true,
-      value: options.el
-    },
-    holder: {
-      value: options.holder
-    },
-    tagName: {
-      value: options.tagName
-    },
-    options: {
-      value: options
-    }
-  };
+  const view = Object.create(View.prototype);
 
-  return Object.create(View.prototype, props);
+  _.extend(view, options);
+
+  view.adapter = Adapter.adapters[options.adapter];
+  view.options = options;
+
+  return view;
 }
 
 View.Adapter = Adapter;
