@@ -8,7 +8,7 @@ const ViewValidator = {
 
   construct(options = {}) {
 
-    if (!options.template || typeof options.template !== 'string') {
+    if (!options.template || typeof options.template === 'undefined') {
       throw new Error(`Can't construct view, no template specified`);
     }
 

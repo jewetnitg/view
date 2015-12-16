@@ -6,5 +6,6 @@ import View from './src/factories/View';
 // @todo create handlebars adapter
 // @todo create polymer adapter
 import './src/adapters/riot';
+import './src/adapters/react';
 
 export default View;
