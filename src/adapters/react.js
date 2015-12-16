@@ -26,13 +26,13 @@ const reactAdapter = Adapter({
   },
 
   sync(view, data = {}) {
-    view.reactElement = React.createElement(view.template, data);
-    view.el = ReactDOM.render(view.reactElement, view.$holder[0]);
+    view.reactElement = reactAdapter.React.createElement(view.template, data);
+    view.el = reactAdapter.ReactDOM.render(view.reactElement, view.$holder[0]);
   },
 
   remove(view) {
     // @todo see if there is a react way to remove elements
-    view.reactElement
+    view.reactElement = null;
     view.$el.remove();
   }
 
