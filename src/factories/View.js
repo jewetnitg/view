@@ -110,20 +110,9 @@ View.prototype = {
 
       if (this.el && force !== true) {
         $el = $(this.el);
-      } else {
-        const html = this.adapter.makeHtml(this, data);
-
-        if (this.adapter.wrap) {
-          $el = $(Adapter.emptyTag(this.tagName));
-          $el.append(html);
-        } else {
-          $el = $(html);
-        }
-
-        $el.appendTo(this.$holder);
       }
 
-      this.el = this.adapter.initializeEl(this, $el, data) || $el[0];
+      this.el = this.adapter.render(this, data, $el);
       this._rendered = true;
     } else {
       this.sync(data);

@@ -7,9 +7,6 @@ import Adapter from '../factories/Adapter';
 const ViewValidator = {
 
   construct(options = {}) {
-    if (options.static && (!options.name || typeof options.name !== 'string')) {
-      throw new Error(`Can't construct static view, no name specified`);
-    }
 
     if (!options.template || typeof options.template !== 'string') {
       throw new Error(`Can't construct view, no template specified`);

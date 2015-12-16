@@ -13,13 +13,15 @@ import Adapter from '../factories/Adapter';
 const riotAdapter = Adapter({
 
   name: 'riot',
-  wrap: false,
 
-  makeHtml(view, data = {}) {
-    return Adapter.emptyTag(view.template);
-  },
+  render(view, data = {}, $el) {
+    const html = Adapter.emptyTag(view.template);
 
-  initializeEl(view, $el, data = {}) {
+    if (!$el) {
+      $el = $(html);
+      $el.appendTo(view.$holder);
+    }
+
     view.tagInstance = riotAdapter.riot.mount($el[0], view.template, data)[0];
     return view.tagInstance.root;
   },
