@@ -20,13 +20,7 @@ import AdapterValidator from '../validators/Adapter';
  * @class Adapter
  */
 function Adapter(options = {}) {
-  _.defaults(options, {
-    rebindEventsAfterSync: true,
-    events: true,
-    render: Adapter.prototype.render,
-    sync: Adapter.prototype.sync,
-    remove: Adapter.prototype.remove
-  });
+  _.defaults(options, Adapter.defaults);
 
   AdapterValidator.construct(options);
 
@@ -77,8 +71,47 @@ Adapter.prototype = {
     view.$el.remove();
     view.$el = null;
     view.el = null;
+  },
+
+  bindEvent(view, event, eventHandler, selector) {
+    if (view.$el) {
+      if (selector) {
+        $(selector, view.$el).on(event, eventHandler);
+      } else {
+        view.$el.on(event, eventHandler);
+      }
+    }
+  },
+
+  bindEvents(view) {
+    _.each(view.events, (eventHandler, eventAndSelector) => {
+      const eventHandlerFn = typeof eventHandler === 'string' ? _.get(view, eventHandler) : eventHandler;
+
+      if (typeof eventHandlerFn !== 'function') {
+        if (typeof eventHandler === 'string') {
+          throw new Error(`Can't bind event listener ${eventAndSelector} with event handler ${eventHandler}, eventHandler not defined on view`);
+        }
+
+        throw new Error(`Can't bind event listener ${eventAndSelector} invalid or no eventHandler provided`);
+      }
+
+      const [event, selector] = (() => {
+        const splitEventAndSelector = eventAndSelector.split(' ');
+        return [splitEventAndSelector.shift(), splitEventAndSelector.join(' ')];
+      })();
+
+      this.bindEvent(view, event, eventHandlerFn, selector);
+    });
   }
 
+};
+
+Adapter.defaults = {
+  rebindEventsAfterSync: false,
+  events: false,
+  render: Adapter.prototype.render,
+  sync: Adapter.prototype.sync,
+  remove: Adapter.prototype.remove
 };
 
 export default Adapter;

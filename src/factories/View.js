@@ -117,6 +117,11 @@ View.prototype = {
       }
 
       this.el = this.adapter.render(this, data, $el);
+
+      if (this.adapter.events === true) {
+        this.adapter.bindEvents(this);
+      }
+
       this._rendered = true;
     } else {
       this.sync(data);
@@ -137,7 +142,9 @@ View.prototype = {
     this.adapter.sync(this, data);
 
     if (this.adapter.rebindEventsAfterSync) {
-      // @todo implement events
+      if (this.adapter.events === true) {
+        this.adapter.bindEvents(this);
+      }
     }
   },
 
