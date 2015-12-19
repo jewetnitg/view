@@ -81,7 +81,9 @@ View.prototype = {
    * @instance
    */
   hide() {
-    this.$el.hide();
+    if (this.$el) {
+      this.$el.hide();
+    }
   },
 
   /**
@@ -91,7 +93,9 @@ View.prototype = {
    * @instance
    */
   show() {
-    this.$el.show();
+    if (this.$el) {
+      this.$el.show();
+    }
   },
 
   /**
