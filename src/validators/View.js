@@ -2,7 +2,6 @@
  * @author rik
  */
 import $ from 'jquery';
-import Adapter from '../factories/Adapter';
 
 const ViewValidator = {
 
@@ -16,7 +15,7 @@ const ViewValidator = {
       throw new Error(`Can't construct view, no adapter specified`);
     }
 
-    if (!Adapter.adapters[options.adapter]) {
+    if (!options.director.adapters[options.adapter]) {
       throw new Error(`Can't construct view, adapter ${options.adapter} doesn't exist`);
     }
 

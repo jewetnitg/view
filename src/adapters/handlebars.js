@@ -3,14 +3,12 @@
  */
 import Handlebars from 'hbsfy/runtime';
 
-import Adapter from '../factories/Adapter';
-
 /**
  *
  * @name handlebarsAdapter
  * @extends Adapter
  */
-const handlebarsAdapter = Adapter({
+const handlebarsAdapter = {
 
   name: 'handlebars',
   events: true,
@@ -43,7 +41,7 @@ const handlebarsAdapter = Adapter({
     }
   }
 
-});
+};
 
 handlebarsAdapter.Handlebars = Handlebars;
 

@@ -24,15 +24,13 @@ function Adapter(options = {}) {
 
   AdapterValidator.construct(options);
 
-  const adapter = Adapter.adapters[options.name] = Object.create(Adapter.prototype);
+  const adapter = Object.create(Adapter.prototype);
 
   _.extend(adapter, options);
   adapter.options = options;
 
   return adapter;
 }
-
-Adapter.adapters = {};
 
 Adapter.emptyTag = function (tagName) {
   return `<${tagName}></${tagName}>`;

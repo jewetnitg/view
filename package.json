@@ -27,6 +27,8 @@
   "eslintConfig": {},
   "dependencies": {
     "babel-polyfill": "^6.3.14",
+    "frontend-middleware": "^0.0.1",
+    "frontend-factory": "^0.0.1",
     "handlebars": "^4.0.5",
     "hbsfy": "^2.4.1",
     "jquery": "2.1.4",

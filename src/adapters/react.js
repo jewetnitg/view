@@ -4,14 +4,12 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 
-import Adapter from '../factories/Adapter';
-
 /**
  *
  * @name reactAdapter
  * @extends Adapter
  */
-const reactAdapter = Adapter({
+const reactAdapter = {
 
   name: 'react',
 
@@ -36,7 +34,7 @@ const reactAdapter = Adapter({
     view.$el.remove();
   }
 
-});
+};
 
 reactAdapter.React = React;
 reactAdapter.ReactDOM = ReactDOM;
