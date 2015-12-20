@@ -100,46 +100,70 @@ View.prototype = {
    * @memberof View
    * @instance
    *
-   * @todo refactor
-   *
    * @param data {Object} Data to be made available to the riot tag
    * @param [force=false] {Boolean} Whether to force a render, by default if already rendered, render reverts to {@link View#sync}.
    */
   render(data = {}, force = false) {
     if (!this._rendered || force === true) {
-      return this.options.director.middleware.security.run(this.security, data)
-        .then(() => {
-          return this.options.director.middleware.data.run(this.data, data, this.sync.bind(this))
-            .then((middlewareData) => {
-              _.merge(data, middlewareData);
-              let $el;
+      return this.runMiddleware(data)
+        .then((middlewareData) => {
+          this.data = _.merge(data, middlewareData);
+          let $el;
 
-              if (this.el && force !== true) {
-                $el = $(this.el);
-              }
+          if (this.el && force !== true) {
+            $el = $(this.el);
+          }
 
-              this.el = this.adapter.render(this, data, $el);
+          this.el = this.adapter.render(this, data, $el);
 
-              if (this.adapter.events === true) {
-                this.adapter.bindEvents(this);
-              }
+          if (this.adapter.events === true) {
+            this.adapter.bindEvents(this);
+          }
 
-              this._rendered = true;
-            }, () => {
-              // data failed
-              this.hide();
-              console.error(`Data middleware failed for View '${this.name}'.`, this, data);
-            });
-        }, () => {
-          // security failed
+          this._rendered = true;
+        }, (err) => {
           this.hide();
+
+          switch (err.reason) {
+            case 'security':
+              break;
+            case 'data':
+              console.error(`Data middleware failed for View '${this.name}'.`, this, data, err);
+              break;
+            default:
+              throw err;
+              break;
+          }
         });
     } else {
-      this.sync(data);
-      this.show();
+      return this.sync(data)
+        .then(() => {
+          this.show();
+        });
     }
+  },
 
-    return Promise.resolve();
+  /**
+   * @todo document
+   * @param data
+   */
+  runMiddleware(data = {}) {
+    return this.options.director.middleware.security.run(this.security, data)
+      .then(() => {
+        return this.options.director.middleware.data.run(this.data, data, this.sync.bind(this))
+          .then(null, (err) => {
+            // data failed
+            return Promise.reject({
+              reason: 'data',
+              err
+            });
+          });
+      }, (err) => {
+        return Promise.reject({
+          reason: 'security',
+          err
+        });
+      });
   },
 
   /**
@@ -154,9 +178,12 @@ View.prototype = {
    * @param data {Object} Data for the riot tag, will be extended with the current data
    */
   sync(data = {}) {
+
     return Promise.resolve()
       .then(() => {
-        const possiblePromise = this.adapter.sync(this, data);
+        _.merge(this.data, data);
+
+        const possiblePromise = this.adapter.sync(this, this.data);
 
         if (this.adapter.rebindEventsAfterSync) {
           if (this.adapter.events === true) {
