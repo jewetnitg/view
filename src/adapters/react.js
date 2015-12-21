@@ -25,7 +25,7 @@ const reactAdapter = {
 
   sync(view, data = {}) {
     view.reactElement = reactAdapter.React.createElement(view.template, data);
-    view.el = reactAdapter.ReactDOM.render(view.reactElement, view.$holder[0]);
+    view.el = reactAdapter.ReactDOM.findDOMNode(reactAdapter.ReactDOM.render(view.reactElement, view.$holder[0]));
   },
 
   remove(view) {

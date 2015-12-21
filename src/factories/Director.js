@@ -6,7 +6,9 @@ import MiddlewareRunner from 'frontend-middleware';
 import FactoryFactory from 'frontend-factory';
 
 import View from './View';
+import SubView from './SubView';
 import StaticView from './StaticView';
+import ObjectWithView from './ObjectWithView';
 import Adapter from './Adapter';
 import ensureView from '../helpers/ensureView';
 import ensureStaticViews from '../helpers/ensureStaticViews';
@@ -40,11 +42,22 @@ const Director = FactoryFactory({
     }
   },
 
+  props: {
+    views: {
+      value: {}
+    },
+    adapters: {
+      value: {}
+    },
+    compositions: {
+      value: {}
+    },
+    staticViews: {
+      value: {}
+    }
+  },
+
   initialize() {
-    this.views = {};
-    this.adapters = {};
-    this.compositions = {};
-    this.staticViews = {};
     this.currentView = null;
     this.currentStaticViews = null;
 
@@ -86,11 +99,13 @@ const Director = FactoryFactory({
     // get options for Views
     this.viewOptions = {};
 
+    // @todo refactor out, replace with ensure
     _.each(this.options.adapters, (adapterOptions, viewName) => {
       adapterOptions.name = adapterOptions.name || viewName;
       this.Adapter(adapterOptions);
     });
 
+    // @todo refactor out, replace with ensure
     _.each(this.options.views, (viewOptions, viewName) => {
       viewOptions.name = viewOptions.name || viewName;
       viewOptions.director = this;
@@ -99,6 +114,16 @@ const Director = FactoryFactory({
   },
 
   prototype: {
+
+    ObjectWithView(options = {}) {
+      options.director = this;
+      return ObjectWithView(options);
+    },
+
+    SubView(options = {}) {
+      options.director = this;
+      return SubView(options);
+    },
 
     /**
      *
@@ -205,6 +230,20 @@ const Director = FactoryFactory({
     },
 
     /**
+     * @todo implement
+     */
+    ensureStaticView() {
+      throw new Error(`Not yet implemented`);
+    },
+
+    /**
+     * @todo implement
+     */
+    ensureView() {
+      throw new Error(`Not yet implemented`);
+    },
+
+    /**
      *
      * @param view
      * @param data
@@ -213,6 +252,7 @@ const Director = FactoryFactory({
      */
     setCurrentView(view = {}, data = {}) {
       this.hideCurrentView();
+      // refactor to Director#ensureView
       this.currentView = ensureView(view, this.viewOptions, this.View.bind(this));
 
       return this.currentView.render(data)
@@ -233,6 +273,7 @@ const Director = FactoryFactory({
       this.hideStaticViews();
       this.currentStaticViews = {};
 
+      // @todo refactor to Director#ensureStaticView and call in the loop below
       ensureStaticViews.call(this, staticViews, this.options.staticViews, this.staticViews, this.StaticView.bind(this));
 
       _.each(staticViews, (staticViewName) => {
@@ -273,6 +314,11 @@ const Director = FactoryFactory({
       });
     },
 
+    /**
+     * @todo document
+     * @param data
+     * @returns {Promise}
+     */
     sync(data = {}) {
       const promises = [];
 

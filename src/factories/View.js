@@ -17,6 +17,7 @@ import ViewValidator from '../validators/View';
  * @property template {*} Type varying on the chosen adapter, if the adapter allows for template to be a function, it can be used to use a different template depending on the data passed in
  *
  * @todo add subviews
+ * @todo refactor to use FactoryFactory
  */
 function View(options = {}) {
   _.defaults(options, View.defaults);
@@ -29,6 +30,8 @@ function View(options = {}) {
 
   view.adapter = options.director.adapters[options.adapter];
   view.options = options;
+  view._data = {};
+  view.subViews = {};
 
   return view;
 }
@@ -66,7 +69,18 @@ View.prototype = {
    * @type jQuery
    */
   get $holder() {
-    return $(this.holder || this.$holder);
+    return $(this.holder);
+  },
+
+  /**
+   * @todo document
+   * @param options
+   * @constructor
+   */
+  SubView(options = {}) {
+    options.parentView = this;
+    delete options.$holder;
+    return this.subViews[options.name] = this.options.director.SubView(options);
   },
 
   /**
@@ -102,41 +116,19 @@ View.prototype = {
    *
    * @param data {Object} Data to be made available to the riot tag
    * @param [force=false] {Boolean} Whether to force a render, by default if already rendered, render reverts to {@link View#sync}.
+   * @param {Boolean} [replaceData=false] Indicates the data should be replaced
+   *
    */
-  render(data = {}, force = false) {
+  render(data = {}, force = false, replaceData = false) {
     if (!this._rendered || force === true) {
       return this.runMiddleware(data)
         .then((middlewareData) => {
-          this.data = _.merge(data, middlewareData);
-          let $el;
-
-          if (this.el && force !== true) {
-            $el = $(this.el);
-          }
-
-          this.el = this.adapter.render(this, data, $el);
-
-          if (this.adapter.events === true) {
-            this.adapter.bindEvents(this);
-          }
-
-          this._rendered = true;
+          return handleMiddlewareResolveForViewRender.call(this, data, middlewareData, force, replaceData);
         }, (err) => {
-          this.hide();
-
-          switch (err.reason) {
-            case 'security':
-              break;
-            case 'data':
-              console.error(`Data middleware failed for View '${this.name}'.`, this, data, err);
-              break;
-            default:
-              throw err;
-              break;
-          }
+          return handleMiddlewareRejectForViewRender.call(this, err, data)
         });
     } else {
-      return this.sync(data)
+      return this.sync(data, replaceData)
         .then(() => {
           this.show();
         });
@@ -176,14 +168,14 @@ View.prototype = {
    * @instance
    *
    * @param data {Object} Data for the riot tag, will be extended with the current data
+   * @param {Boolean} [replaceData=false] Indicates the data should be replaced
    */
-  sync(data = {}) {
-
+  sync(data = {}, replaceData = false) {
     return Promise.resolve()
       .then(() => {
-        _.merge(this.data, data);
+        mergeIntoData.call(this, data, replaceData);
 
-        const possiblePromise = this.adapter.sync(this, this.data);
+        this.adapter.sync(this, this._data);
 
         if (this.adapter.rebindEventsAfterSync) {
           if (this.adapter.events === true) {
@@ -191,7 +183,7 @@ View.prototype = {
           }
         }
 
-        return possiblePromise;
+        return syncSubViews.call(this);
       });
   },
 
@@ -207,5 +199,92 @@ View.prototype = {
   }
 
 };
+
+function ensureSubViews() {
+  _.each(this.options.subViews, (options = {}, name) => {
+    options.name = options.name || name;
+
+    if (!this.subViews[options.name]) {
+      this.SubView(options);
+    }
+  });
+}
+
+// @todo pass params
+function renderSubViews(data, force, replaceData = false) {
+  const promises = [];
+
+  ensureSubViews.call(this);
+
+  _.each(this.subViews, (subView) => {
+    promises.push(
+      subView.render(data, force, replaceData)
+    );
+  });
+
+  return Promise.all(promises);
+}
+
+function syncSubViews(data, replaceData = false) {
+  const promises = [];
+
+  _.each(this.subViews, (subView) => {
+    promises.push(
+      subView.sync(data, replaceData)
+    );
+  });
+
+  return Promise.all(promises);
+}
+
+function mergeIntoData(...data) {
+  const replaceData = data.pop();
+  const args = data;
+
+  if (replaceData === true) {
+    this._data = {};
+  }
+
+  args.unshift(this._data);
+
+  _.merge.apply(data, args);
+}
+
+function handleMiddlewareResolveForViewRender(data, middlewareData, force, replaceData = false) {
+  mergeIntoData.call(this, data, middlewareData, replaceData);
+  let $el;
+
+  if (this.el && force !== true) {
+    $el = $(this.el);
+  }
+
+  this.el = this.adapter.render(this, data, $el);
+
+  if (this.adapter.events === true) {
+    this.adapter.bindEvents(this);
+  }
+
+  this._rendered = true;
+
+  return renderSubViews.call(this, data, force, replaceData);
+}
+
+function handleMiddlewareRejectForViewRender(err, data) {
+  this.hide();
+
+  switch (err.reason) {
+    case 'security':
+      // it is ok for security to reject, in this case we are not allowed to see this View
+      break;
+    case 'data':
+      // log for tech support
+      console.error(`Data middleware failed for View '${this.name}'.`, this, data, err);
+      break;
+    default:
+      // throw log for tech support / bugs
+      throw err;
+      break;
+  }
+}
 
 export default View;
