@@ -4,6 +4,11 @@
 import _ from 'lodash';
 import ObjectWithView from './ObjectWithView';
 
+/**
+ * @todo document
+ * @extends ObjectWithView
+ * @class StaticView
+ */
 const StaticView = ObjectWithView.extend({
 
   validate(options) {

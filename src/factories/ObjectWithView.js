@@ -30,7 +30,7 @@ const ObjectWithView = FactoryFactory({
         throw new Error(`Can't construct ObjectWithView, a holder must be specified.`);
       }
 
-      if (!options.director.viewOptions[options.view]) {
+      if (!options.director.options.views[options.view]) {
         throw new Error(`Can't construct ObjectWithView, View with name '${options.view}' is not defined.`);
       }
     }
@@ -40,6 +40,7 @@ const ObjectWithView = FactoryFactory({
     //noinspection JSUnusedAssignment
     _.extend(this, _.omit(this.options, _.keys(ObjectWithView.prototype).push('view')));
     this.view = View(makeViewOptions(this.options));
+    this.view.owner = this;
   },
 
   prototype: {
@@ -91,7 +92,8 @@ const ObjectWithView = FactoryFactory({
      * @memberof ObjectWithView
      * @instance
      *
-     * @param data {Object} Data to use as params for the security and data middleware
+     * @param req {Object} Data to merge req with used for the middleware
+     * @param res {Object} Data to merge res with used for the middleware and, when middleware has finished, as data for the template
      * @param {Boolean} [replace=false] Indicates the current data should be replaced instead of being extended (merged) with the data passed in.
      *
      * @returns {Promise}
@@ -105,8 +107,8 @@ const ObjectWithView = FactoryFactory({
      *   // do something
      * });
      */
-    render(data = {}, replace = false) {
-      return this.view.render(data, replace);
+    render(req = {}, res = {}, replace = false) {
+      return this.view.render(req, res, replace);
     },
 
     /**
@@ -178,22 +180,20 @@ const ObjectWithView = FactoryFactory({
 });
 
 function makeViewOptions(options = {}) {
-  const viewOptions = _.clone(options.director.viewOptions[options.view]);
-  _.defaults(viewOptions, options.director.View.defaults);
+  const viewImpl = _.defaults(options.director.options.views[options.view], options.director.View.defaults);
+  const viewOptions = _.clone(viewImpl);
 
-  viewOptions.holder = options.holder || viewOptions.holder;
-  viewOptions.$holder = options.$holder || viewOptions.$holder;
-  viewOptions.el = options.el || viewOptions.el;
-  viewOptions.parentView = options.parentView || viewOptions.parentView;
+  _.extend(viewOptions, _.defaults({}, options, viewOptions, {
+    security: [],
+    data: []
+  }));
 
-  if (Array.isArray(options.security)) {
-    viewOptions.security = viewOptions.security || [];
-    viewOptions.security.unshift.apply(viewOptions.security, options.security);
+  if (Array.isArray(viewImpl.security)) {
+    viewOptions.security.push.apply(viewOptions.security, viewImpl.security);
   }
 
-  if (Array.isArray(options.data)) {
-    viewOptions.data = viewOptions.data || [];
-    viewOptions.data.unshift.apply(viewOptions.data, options.data);
+  if (Array.isArray(viewImpl.data)) {
+    viewOptions.data.push.apply(viewOptions.data, viewImpl.data);
   }
 
   return viewOptions;

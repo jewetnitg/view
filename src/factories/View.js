@@ -17,12 +17,13 @@ const View = FactoryFactory({
 
   defaults: {
     holder: 'body',
-    adapter: 'riot',
-    tagName: 'div'
+    adapter: 'riot'
   },
 
   validate: [
     'template',
+    'holder',
+    'adapter',
     'director',
     {
       'adapter': 'string'
@@ -116,21 +117,22 @@ const View = FactoryFactory({
      * @memberof View
      * @instance
      *
-     * @param data {Object} Data to be made available to the riot tag
+     * @param params {Object} Object the params object used in middleware execution is extended with
+     * @param res {Object} Object the res object used in middleware execution is extended with (response data)
      * @param [force=false] {Boolean} Whether to force a render, by default if already rendered, render reverts to {@link View#sync}.
-     * @param {Boolean} [replaceData=false] Indicates the data should be replaced
+     * @param {Boolean} [replaceData=false] Indicates the params should be replaced
      *
      */
-    render(data = {}, force = false, replaceData = false) {
+    render(params = {}, res = {}, force = false, replaceData = false) {
       if (!this._rendered || force === true) {
-        return this.runMiddleware(data)
+        return this.runMiddleware(params, res)
           .then((middlewareData) => {
-            return handleMiddlewareResolveForViewRender.call(this, data, middlewareData, force, replaceData);
+            return handleMiddlewareResolveForViewRender.call(this, params, middlewareData, force, replaceData);
           }, (err) => {
-            return handleMiddlewareRejectForViewRender.call(this, err, data)
+            return handleMiddlewareRejectForViewRender.call(this, err, params)
           });
       } else {
-        return this.sync(data, replaceData)
+        return this.sync(params, replaceData)
           .then(() => {
             this.show();
           });
@@ -139,16 +141,16 @@ const View = FactoryFactory({
 
     /**
      * @todo document
-     * @param data
+     * @todo refactor?
+     * @param params
+     * @param res
      */
-    runMiddleware(data = {}) {
-      return this.options.director.middleware.security.run(this.security, data)
+    runMiddleware(params = {}, res = {}) {
+      return this.options.director.middleware.security.run(this.security, params, params)
         .then(() => {
-          return this.options.director.middleware.data.run(this.data, data, null, {
-              sync: this.sync.bind(this)
-            })
+          res.sync = this.sync.bind(this);
+          return this.options.director.middleware.data.run(this.data, params, params, res)
             .then(null, (err) => {
-              // data failed
               return Promise.reject({
                 reason: 'data',
                 err
@@ -165,8 +167,6 @@ const View = FactoryFactory({
     /**
      * Syncs data to the template
      *
-     * @todo decide whether we want to re-run middleware when syncing
-     *
      * @method sync
      * @memberof View
      * @instance
@@ -181,10 +181,8 @@ const View = FactoryFactory({
 
           this.adapter.sync(this, this._data);
 
-          if (this.adapter.rebindEventsAfterSync) {
-            if (this.adapter.events === true) {
-              this.adapter.bindEvents(this);
-            }
+          if (this.adapter.rebindEventsAfterSync && this.adapter.events === true) {
+            this.adapter.bindEvents(this);
           }
 
           return syncSubViews.call(this);
@@ -206,6 +204,15 @@ const View = FactoryFactory({
 
 });
 
+function renderSubViews(req, data, force, replaceData = false) {
+  ensureSubViews.call(this);
+  return Promise.all(
+    _.map(this.subViews, (subView) => {
+      return subView.render(req, data, force, replaceData);
+    })
+  );
+}
+
 function ensureSubViews() {
   _.each(this.options.subViews, (options = {}, name) => {
     options.name = options.name || name;
@@ -216,31 +223,27 @@ function ensureSubViews() {
   });
 }
 
-// @todo pass params
-function renderSubViews(data, force, replaceData = false) {
-  const promises = [];
-
-  ensureSubViews.call(this);
-
-  _.each(this.subViews, (subView) => {
-    promises.push(
-      subView.render(data, force, replaceData)
-    );
-  });
-
-  return Promise.all(promises);
+function syncSubViews(data, replaceData = false) {
+  return Promise.all(
+    _.map(this.subViews, (subView) => {
+      return subView.sync(data, replaceData)
+    })
+  );
 }
 
-function syncSubViews(data, replaceData = false) {
-  const promises = [];
+function handleMiddlewareResolveForViewRender(req, middlewareData, force, replaceData = false) {
+  mergeIntoData.call(this, middlewareData, replaceData);
+  let $el = this.el && force !== true ? $(this.el) : null;
 
-  _.each(this.subViews, (subView) => {
-    promises.push(
-      subView.sync(data, replaceData)
-    );
-  });
+  this.el = this.adapter.render(this, this._data, $el);
 
-  return Promise.all(promises);
+  if (this.adapter.events === true) {
+    this.adapter.bindEvents(this);
+  }
+
+  this._rendered = true;
+
+  return renderSubViews.call(this, req, middlewareData, force, replaceData);
 }
 
 function mergeIntoData(...data) {
@@ -253,43 +256,18 @@ function mergeIntoData(...data) {
 
   args.unshift(this._data);
 
-  _.merge.apply(data, args);
-}
-
-function handleMiddlewareResolveForViewRender(data, middlewareData, force, replaceData = false) {
-  mergeIntoData.call(this, data, middlewareData, replaceData);
-  let $el;
-
-  if (this.el && force !== true) {
-    $el = $(this.el);
-  }
-
-  this.el = this.adapter.render(this, data, $el);
-
-  if (this.adapter.events === true) {
-    this.adapter.bindEvents(this);
-  }
-
-  this._rendered = true;
-
-  return renderSubViews.call(this, data, force, replaceData);
+  return _.merge.apply(data, args);
 }
 
 function handleMiddlewareRejectForViewRender(err, data) {
   this.hide();
 
-  switch (err.reason) {
-    case 'security':
-      // it is ok for security to reject, in this case we are not allowed to see this View
-      break;
-    case 'data':
-      // log for tech support
-      console.error(`Data middleware failed for View '${this.name}'.`, this, data, err);
-      break;
-    default:
-      // throw log for tech support / bugs
-      throw err;
-      break;
+  if (err.reason === 'data') {
+    // log for tech support
+    console.error(`Data middleware failed for View '${this.name}'.`, this, data, err);
+  } else if (err.reason !== 'security') {
+    // throw log for tech support / bugs
+    throw err;
   }
 }
 

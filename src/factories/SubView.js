@@ -5,6 +5,11 @@ import _ from 'lodash';
 import $ from 'jquery';
 import ObjectWithView from './ObjectWithView';
 
+/**
+ * @todo document
+ * @class SubView
+ * @extends ObjectWithView
+ */
 const SubView = ObjectWithView.extend({
 
   validate: [
@@ -19,6 +24,14 @@ const SubView = ObjectWithView.extend({
 
   prototype: {
 
+    /**
+     * holder selector in the context of the parentView of this {@link SubView}
+     * @todo document
+     * @type jQuery
+     * @name $holder
+     * @memberof SubView
+     * @instance
+     */
     get $holder() {
       if (this.holder && this.parentView) {
         return $(this.holder, this.parentView.el);

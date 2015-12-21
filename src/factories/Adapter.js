@@ -20,7 +20,7 @@ const AdapterPrototype = {
   sync(view, data = {}) {
     // fallback, sync should really be overridden
     this.remove(view);
-    view.render(data, true);
+    return this.render(view, data, view.$el);
   },
 
   /**
@@ -39,6 +39,13 @@ const AdapterPrototype = {
     view.el = null;
   },
 
+  /**
+   * @todo document
+   * @param view
+   * @param event
+   * @param eventHandler
+   * @param selector
+   */
   bindEvent(view, event, eventHandler, selector) {
     if (view.$el) {
       if (selector) {
@@ -49,6 +56,10 @@ const AdapterPrototype = {
     }
   },
 
+  /**
+   * @todo document
+   * @param view
+   */
   bindEvents(view) {
     _.each(view.events, (eventHandler, eventAndSelector) => {
       const eventHandlerFn = typeof eventHandler === 'string' ? _.get(view, eventHandler) : eventHandler;
@@ -71,6 +82,21 @@ const AdapterPrototype = {
   }
 };
 
+/**
+ * The {@link Adapter} class serves to abstract the actual rendering of {@link View}s.
+ * A {@link View} uses an {@link Adapter} to create its HTML, append it to the DOM and listen for events.
+ *
+ * @param options {Object} Object containing the properties listed below
+ *
+ * @property name {String}
+ * @property {Boolean} [rebindEventsAfterSync=true]
+ * @property {Boolean} [events=true]
+ * @property render {Function<HTMLElement>}
+ * @property [sync=Adapter#sync] {Function}
+ * @property [remove=Adapter#remove] {Function}
+ *
+ * @class Adapter
+ */
 const Adapter = FactoryFactory({
 
   defaults: {
@@ -104,19 +130,9 @@ const Adapter = FactoryFactory({
 });
 
 /**
- * The {@link Adapter} class serves to abstract the actual rendering of {@link View}s.
- * A {@link View} uses an {@link Adapter} to create its HTML.
- *
- * @param options {Object} Object containing the properties listed below
- *
- * @property name {String}
- * @property {Boolean} [rebindEventsAfterSync=true]
- * @property {Boolean} [events=true]
- * @property render {Function<HTMLElement>}
- * @property [sync=Adapter#sync] {Function}
- * @property [remove=Adapter#remove] {Function}
- *
- * @class Adapter
+ * @todo document
+ * @param tagName
+ * @returns {*}
  */
 Adapter.emptyTag = function (tagName) {
   return `<${tagName}></${tagName}>`;

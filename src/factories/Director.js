@@ -10,10 +10,9 @@ import SubView from './SubView';
 import StaticView from './StaticView';
 import ObjectWithView from './ObjectWithView';
 import Adapter from './Adapter';
-import ensureView from '../helpers/ensureView';
-import ensureStaticViews from '../helpers/ensureStaticViews';
-
+import ensure from '../helpers/ensure';
 // provided adapters
+// this.ensureStaticView
 import react from '../adapters/react';
 import riot from '../adapters/riot';
 import handlebars from '../adapters/handlebars';
@@ -46,6 +45,9 @@ const Director = FactoryFactory({
     views: {
       value: {}
     },
+    viewOptions: {
+      value: {}
+    },
     adapters: {
       value: {}
     },
@@ -74,14 +76,14 @@ const Director = FactoryFactory({
     }
 
     if (this.options.libraries.react) {
-      //noinspection JSPrimitiveTypeWrapperUsage
       react.React = this.options.libraries.react;
     }
 
     if (this.options.libraries['react-dom']) {
-      //noinspection JSPrimitiveTypeWrapperUsage
       react.ReactDOM = this.options.libraries['react-dom'];
     }
+
+    MiddlewareRunner.session = this.options.session;
 
     this.middleware = MiddlewareRunner({
       security: {
@@ -90,30 +92,23 @@ const Director = FactoryFactory({
       data: {
         sync: this.sync.bind(this),
         res: true,
-        //reqFactory: RequestFactoryFactory(this.session),
-        //resFactory: DataResponseFactoryFactory(this),
         middleware: this.options.middleware.data
       }
     });
 
-    // get options for Views
-    this.viewOptions = {};
 
     // @todo refactor out, replace with ensure
     _.each(this.options.adapters, (adapterOptions, viewName) => {
       adapterOptions.name = adapterOptions.name || viewName;
       this.Adapter(adapterOptions);
     });
-
-    // @todo refactor out, replace with ensure
-    _.each(this.options.views, (viewOptions, viewName) => {
-      viewOptions.name = viewOptions.name || viewName;
-      viewOptions.director = this;
-      this.viewOptions[viewOptions.name] = viewOptions;
-    });
   },
 
   prototype: {
+
+    get session() {
+      return this.options.session;
+    },
 
     ObjectWithView(options = {}) {
       options.director = this;
@@ -139,7 +134,7 @@ const Director = FactoryFactory({
       if (options.name) {
         this.views[options.name] = this.views[options.name] || [];
         this.views[options.name].push(view);
-        this.viewOptions[options.name] = this.viewOptions[options.name] || view;
+        this.options.views[options.name] = this.options.views[options.name] || view;
       }
 
       return view;
@@ -198,64 +193,58 @@ const Director = FactoryFactory({
     /**
      *
      * @param options
-     * @param data
-     * @todo refactor to ensure
+     * @param params
+     * @param resExtendObj
      */
-    setComposition(options = {}, data = {}) {
+    setComposition(options = {}, params = {}, resExtendObj = {}) {
       if (!Array.isArray(options) && typeof options === 'object') {
-        const promises = [];
-
-        if (options.view) {
-          promises.push(
-            this.setCurrentView(options.view, data)
-          );
-        }
-
-        if (options.staticViews) {
-          promises.push(
-            this.setStaticViews(options.staticViews, data)
-          );
-        }
-
-        return Promise.all(promises);
-      } else if (typeof object === 'string') {
+        return Promise.all([
+          options.view ? this.setCurrentView(options.view, params, resExtendObj) : null,
+          options.staticViews ? this.setStaticViews(options.staticViews, params, resExtendObj) : null
+        ]);
+      } else if (typeof options === 'string') {
         const composition = this.compositions[options];
 
         if (!composition) {
           throw new Error(`Can't set composition, composition '${options}' not defined.`);
         }
 
-        return this.setComposition(composition, data);
+        return this.setComposition(composition, params, resExtendObj);
       }
     },
 
     /**
-     * @todo implement
+     * @todo document
      */
-    ensureStaticView() {
-      throw new Error(`Not yet implemented`);
+    ensureView(view) {
+      return ensure('View', this.options.views, this.View.bind(this), view);
     },
 
     /**
-     * @todo implement
+     * @todo document
      */
-    ensureView() {
-      throw new Error(`Not yet implemented`);
+    ensureStaticView(staticViewName) {
+      return this.staticViews[staticViewName] = ensure(
+        'StaticView',
+        this.options.staticViews,
+        this.StaticView.bind(this),
+        staticViewName,
+        this.staticViews
+      );
     },
 
     /**
      *
      * @param view
-     * @param data
+     * @param params
+     * @param res
      *
-     * @todo implement data
      */
-    setCurrentView(view = {}, data = {}) {
+    setCurrentView(view = {}, params = {}, res = {}) {
       this.hideCurrentView();
-      // refactor to Director#ensureView
-      this.currentView = ensureView(view, this.viewOptions, this.View.bind(this));
+      this.currentView = this.ensureView(view, this.options.views, this.View.bind(this));
 
-      return this.currentView.render(data)
+      return this.currentView.render(params, res)
         .then(() => {
           this.currentView.show();
         });
@@ -264,36 +253,22 @@ const Director = FactoryFactory({
     /**
      *
      * @param staticViews
-     * @param data
-     *
-     * @todo implement data
+     * @param params
+     * @param res
      */
-    setStaticViews(staticViews = [], data = {}) {
-      const promises = [];
+    setStaticViews(staticViews = [], params = {}, res = {}) {
       this.hideStaticViews();
       this.currentStaticViews = {};
 
-      // @todo refactor to Director#ensureStaticView and call in the loop below
-      ensureStaticViews.call(this, staticViews, this.options.staticViews, this.staticViews, this.StaticView.bind(this));
+      return Promise.all(
+        _.map(staticViews, (staticViewName) => {
+          const staticView = this.ensureStaticView(staticViewName);
 
-      _.each(staticViews, (staticViewName) => {
-        const staticView = this.staticViews[staticViewName];
+          this.currentStaticViews[staticViewName] = staticView;
 
-        if (!staticView) {
-          throw new Error(`StaticView with name '${staticViewName}' not defined`);
-        }
-
-        const promise = staticView.render(data)
-          .then(() => {
-            staticView.show();
-          });
-
-        promises.push(promise);
-
-        this.currentStaticViews[staticViewName] = staticView;
-      });
-
-      return Promise.all(promises);
+          return staticView.render(params, res);
+        })
+      );
     },
 
     /**
@@ -320,23 +295,12 @@ const Director = FactoryFactory({
      * @returns {Promise}
      */
     sync(data = {}) {
-      const promises = [];
-
-      if (this.currentView) {
-        promises.push(
-          this.currentView.sync(data)
-        );
-      }
-
-      if (this.currentStaticViews) {
-        _.each(this.currentStaticViews, (staticView) => {
-          promises.push(
-            staticView.sync(data)
-          );
-        });
-      }
-
-      return Promise.all(promises);
+      const currentViewSync = this.currentView && this.currentView.sync(data);
+      return Promise.all(
+        _.map(this.currentStaticViews, (staticView) => {
+          return staticView.sync(data)
+        }).concat([currentViewSync])
+      );
     }
 
   }
