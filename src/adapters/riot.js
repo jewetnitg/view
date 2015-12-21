@@ -45,8 +45,7 @@ const riotAdapter = {
   },
 
   remove(view) {
-    // @todo what do we do with the keepTheParent parameter
-    view.tagInstance.unmount();
+    view.tagInstance.unmount(true);
     view.$el.remove();
   }
 

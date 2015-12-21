@@ -29,9 +29,8 @@ const View = FactoryFactory({
       'adapter': 'string'
     },
     (options = {}) => {
-      if (!options.director.adapters[options.adapter]) {
-        throw new Error(`Can't construct view, adapter ${options.adapter} doesn't exist`);
-      }
+      // this will throw an error if the adapter does not exist
+      options.director.ensureAdapter(options.adapter);
 
       if (!(options.holder && typeof options.holder === 'string') && !(options.$holder && options.$holder.length)) {
         throw new Error(`Can't construct view, no holder specified`);
@@ -91,6 +90,7 @@ const View = FactoryFactory({
      * @method hide
      * @memberof View
      * @instance
+     * @todo call res.destroy
      */
     hide() {
       if (this.$el) {
@@ -141,7 +141,6 @@ const View = FactoryFactory({
 
     /**
      * @todo document
-     * @todo refactor?
      * @param params
      * @param res
      */
@@ -192,12 +191,21 @@ const View = FactoryFactory({
     /**
      * Removes the {@link View}
      *
+     * @todo call res.destroy
      * @method hide
      * @memberof View
      * @instance
      */
     remove() {
-      this.adapter.remove(this);
+      if (this._rendered) {
+        this.adapter.remove(this);
+        this._rendered = false;
+        this.el = null;
+
+        _.each(this.subViews, (subView) => {
+          subView.remove();
+        });
+      }
     }
 
   }

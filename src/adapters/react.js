@@ -29,9 +29,8 @@ const reactAdapter = {
   },
 
   remove(view) {
-    // @todo see if there is a react way to remove elements
     view.reactElement = null;
-    view.$el.remove();
+    reactAdapter.ReactDOM.unmountComponentAtNode(view.$el.parent()[0]);
   }
 
 };

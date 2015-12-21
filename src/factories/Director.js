@@ -25,10 +25,6 @@ import handlebars from '../adapters/handlebars';
  */
 const Director = FactoryFactory({
 
-  validate() {
-    // @todo implement validation? do we need validation?
-  },
-
   defaults() {
     return {
       session: {},
@@ -94,13 +90,6 @@ const Director = FactoryFactory({
         res: true,
         middleware: this.options.middleware.data
       }
-    });
-
-
-    // @todo refactor out, replace with ensure
-    _.each(this.options.adapters, (adapterOptions, viewName) => {
-      adapterOptions.name = adapterOptions.name || viewName;
-      this.Adapter(adapterOptions);
     });
   },
 
@@ -216,6 +205,13 @@ const Director = FactoryFactory({
     /**
      * @todo document
      */
+    ensureAdapter(adapter) {
+      return ensure('Adapter', this.options.adapters, this.Adapter.bind(this), adapter, this.adapters);
+    },
+
+    /**
+     * @todo document
+     */
     ensureView(view) {
       return ensure('View', this.options.views, this.View.bind(this), view);
     },
@@ -224,7 +220,7 @@ const Director = FactoryFactory({
      * @todo document
      */
     ensureStaticView(staticViewName) {
-      return this.staticViews[staticViewName] = ensure(
+      return ensure(
         'StaticView',
         this.options.staticViews,
         this.StaticView.bind(this),
