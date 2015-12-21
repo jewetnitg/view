@@ -2,41 +2,9 @@
  * @author rik
  */
 import _ from 'lodash';
-import AdapterValidator from '../validators/Adapter';
+import FactoryFactory from 'frontend-factory';
 
-/**
- * The {@link Adapter} class serves to abstract the actual rendering of {@link View}s.
- * A {@link View} uses an {@link Adapter} to create its HTML.
- *
- * @param options {Object} Object containing the properties listed below
- *
- * @property name {String}
- * @property {Boolean} [rebindEventsAfterSync=true]
- * @property {Boolean} [events=true]
- * @property render {Function<HTMLElement>}
- * @property [sync=Adapter#sync] {Function}
- * @property [remove=Adapter#remove] {Function}
- *
- * @class Adapter
- */
-function Adapter(options = {}) {
-  _.defaults(options, Adapter.defaults);
-
-  AdapterValidator.construct(options);
-
-  const adapter = Object.create(Adapter.prototype);
-
-  _.extend(adapter, options);
-  adapter.options = options;
-
-  return adapter;
-}
-
-Adapter.emptyTag = function (tagName) {
-  return `<${tagName}></${tagName}>`;
-};
-
-Adapter.prototype = {
+const AdapterPrototype = {
 
   /**
    * In charge of syncing data for a {@link View}, by default it removes the {@link View}s current $el and creates a new one with the data provided.
@@ -101,15 +69,57 @@ Adapter.prototype = {
       this.bindEvent(view, event, eventHandlerFn, selector);
     });
   }
-
 };
 
-Adapter.defaults = {
-  rebindEventsAfterSync: false,
-  events: false,
-  render: Adapter.prototype.render,
-  sync: Adapter.prototype.sync,
-  remove: Adapter.prototype.remove
+const Adapter = FactoryFactory({
+
+  defaults: {
+    rebindEventsAfterSync: false,
+    events: false,
+    sync: AdapterPrototype.sync,
+    remove: AdapterPrototype.remove
+  },
+
+  validate: [
+    'director',
+    {
+      name: 'string',
+      render: 'function',
+      sync: 'function',
+      remove: 'function'
+    },
+    (options) => {
+      if (options.director.adapters[options.name]) {
+        throw new Error(`Can't construct Adapter, Adapter with name '${options.name}' already exists.`);
+      }
+    }
+  ],
+
+  initialize() {
+    _.extend(this, this.options);
+  },
+
+  prototype: AdapterPrototype
+
+});
+
+/**
+ * The {@link Adapter} class serves to abstract the actual rendering of {@link View}s.
+ * A {@link View} uses an {@link Adapter} to create its HTML.
+ *
+ * @param options {Object} Object containing the properties listed below
+ *
+ * @property name {String}
+ * @property {Boolean} [rebindEventsAfterSync=true]
+ * @property {Boolean} [events=true]
+ * @property render {Function<HTMLElement>}
+ * @property [sync=Adapter#sync] {Function}
+ * @property [remove=Adapter#remove] {Function}
+ *
+ * @class Adapter
+ */
+Adapter.emptyTag = function (tagName) {
+  return `<${tagName}></${tagName}>`;
 };
 
 export default Adapter;

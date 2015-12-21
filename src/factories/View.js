@@ -1,11 +1,7 @@
-/**
- * @author rik
- */
 import _ from 'lodash';
 import $ from 'jquery';
 import riot from 'riot/riot+compiler';
-
-import ViewValidator from '../validators/View';
+import FactoryFactory from 'frontend-factory';
 
 /**
  * @class View
@@ -16,189 +12,197 @@ import ViewValidator from '../validators/View';
  * @property holder {String} jQuery selector, refers to the element this view should be appended to
  * @property template {*} Type varying on the chosen adapter, if the adapter allows for template to be a function, it can be used to use a different template depending on the data passed in
  *
- * @todo add subviews
- * @todo refactor to use FactoryFactory
  */
-function View(options = {}) {
-  _.defaults(options, View.defaults);
+const View = FactoryFactory({
 
-  ViewValidator.construct(options);
-
-  const view = Object.create(View.prototype);
-
-  _.extend(view, options);
-
-  view.adapter = options.director.adapters[options.adapter];
-  view.options = options;
-  view._data = {};
-  view.subViews = {};
-
-  return view;
-}
-
-/**
- * Default properties of {@link View}s, these may be overridden
- * @memberof View
- * @static
- * @type Object
- * @property {String} [holder='body'] - Default holder
- */
-View.defaults = {
-  holder: 'body',
-  tagName: 'div'
-};
-
-View.prototype = {
-
-  /**
-   * The root element wrapped in jQuery
-   * @name $el
-   * @memberof View
-   * @instance
-   * @type jQuery|null
-   */
-  get $el() {
-    return this.el ? $(this.el) : null;
+  defaults: {
+    holder: 'body',
+    adapter: 'riot',
+    tagName: 'div'
   },
 
-  /**
-   * The holder wrapped in jQuery
-   * @name $holder
-   * @memberof View
-   * @instance
-   * @type jQuery
-   */
-  get $holder() {
-    return $(this.holder);
-  },
+  validate: [
+    'template',
+    'director',
+    {
+      'adapter': 'string'
+    },
+    (options = {}) => {
+      if (!options.director.adapters[options.adapter]) {
+        throw new Error(`Can't construct view, adapter ${options.adapter} doesn't exist`);
+      }
 
-  /**
-   * @todo document
-   * @param options
-   * @constructor
-   */
-  SubView(options = {}) {
-    options.parentView = this;
-    delete options.$holder;
-    return this.subViews[options.name] = this.options.director.SubView(options);
-  },
+      if (!(options.holder && typeof options.holder === 'string') && !(options.$holder && options.$holder.length)) {
+        throw new Error(`Can't construct view, no holder specified`);
+      }
 
-  /**
-   * Hides the {@link View}
-   * @method hide
-   * @memberof View
-   * @instance
-   */
-  hide() {
-    if (this.$el) {
-      this.$el.hide();
+      if (!(options.holder && $(options.holder).length) && !(options.$holder && options.$holder.length)) {
+        throw new Error(`Can't construct view, holder not found in DOM`);
+      }
     }
+  ],
+
+  initialize() {
+    _.extend(this, _.omit(this.options, ['$el']));
+
+    this.adapter = this.options.director.adapters[this.options.adapter];
+    this._data = {};
+    this.subViews = {};
   },
 
-  /**
-   * Shows the {@link View}
-   * @method show
-   * @memberof View
-   * @instance
-   */
-  show() {
-    if (this.$el) {
-      this.$el.show();
-    }
-  },
+  prototype: {
 
-  /**
-   * Creates the HTML for an element and appends it to the holder, if the element already exists, this method reverts to {@link View#sync}, unless the force paramter is set to true
-   *
-   * @method render
-   * @memberof View
-   * @instance
-   *
-   * @param data {Object} Data to be made available to the riot tag
-   * @param [force=false] {Boolean} Whether to force a render, by default if already rendered, render reverts to {@link View#sync}.
-   * @param {Boolean} [replaceData=false] Indicates the data should be replaced
-   *
-   */
-  render(data = {}, force = false, replaceData = false) {
-    if (!this._rendered || force === true) {
-      return this.runMiddleware(data)
-        .then((middlewareData) => {
-          return handleMiddlewareResolveForViewRender.call(this, data, middlewareData, force, replaceData);
-        }, (err) => {
-          return handleMiddlewareRejectForViewRender.call(this, err, data)
-        });
-    } else {
-      return this.sync(data, replaceData)
-        .then(() => {
-          this.show();
-        });
-    }
-  },
+    /**
+     * The root element wrapped in jQuery
+     * @name $el
+     * @memberof View
+     * @instance
+     * @type jQuery|null
+     */
+    get $el() {
+      return this.el ? $(this.el) : null;
+    },
 
-  /**
-   * @todo document
-   * @param data
-   */
-  runMiddleware(data = {}) {
-    return this.options.director.middleware.security.run(this.security, data)
-      .then(() => {
-        return this.options.director.middleware.data.run(this.data, data, this.sync.bind(this))
-          .then(null, (err) => {
-            // data failed
-            return Promise.reject({
-              reason: 'data',
-              err
-            });
+    /**
+     * The holder wrapped in jQuery
+     * @name $holder
+     * @memberof View
+     * @instance
+     * @type jQuery
+     */
+    get $holder() {
+      return $(this.holder);
+    },
+
+    /**
+     * @todo document
+     * @param options
+     * @constructor
+     */
+    SubView(options = {}) {
+      options.parentView = this;
+      delete options.$holder;
+      return this.subViews[options.name] = this.options.director.SubView(options);
+    },
+
+    /**
+     * Hides the {@link View}
+     * @method hide
+     * @memberof View
+     * @instance
+     */
+    hide() {
+      if (this.$el) {
+        this.$el.hide();
+      }
+    },
+
+    /**
+     * Shows the {@link View}
+     * @method show
+     * @memberof View
+     * @instance
+     */
+    show() {
+      if (this.$el) {
+        this.$el.show();
+      }
+    },
+
+    /**
+     * Creates the HTML for an element and appends it to the holder, if the element already exists, this method reverts to {@link View#sync}, unless the force parameter is set to true
+     *
+     * @method render
+     * @memberof View
+     * @instance
+     *
+     * @param data {Object} Data to be made available to the riot tag
+     * @param [force=false] {Boolean} Whether to force a render, by default if already rendered, render reverts to {@link View#sync}.
+     * @param {Boolean} [replaceData=false] Indicates the data should be replaced
+     *
+     */
+    render(data = {}, force = false, replaceData = false) {
+      if (!this._rendered || force === true) {
+        return this.runMiddleware(data)
+          .then((middlewareData) => {
+            return handleMiddlewareResolveForViewRender.call(this, data, middlewareData, force, replaceData);
+          }, (err) => {
+            return handleMiddlewareRejectForViewRender.call(this, err, data)
           });
-      }, (err) => {
-        return Promise.reject({
-          reason: 'security',
-          err
+      } else {
+        return this.sync(data, replaceData)
+          .then(() => {
+            this.show();
+          });
+      }
+    },
+
+    /**
+     * @todo document
+     * @param data
+     */
+    runMiddleware(data = {}) {
+      return this.options.director.middleware.security.run(this.security, data)
+        .then(() => {
+          return this.options.director.middleware.data.run(this.data, data, this.sync.bind(this))
+            .then(null, (err) => {
+              // data failed
+              return Promise.reject({
+                reason: 'data',
+                err
+              });
+            });
+        }, (err) => {
+          return Promise.reject({
+            reason: 'security',
+            err
+          });
         });
-      });
-  },
+    },
 
-  /**
-   * Syncs data to the template
-   *
-   * @todo decide whether we want to re-run middleware when syncing
-   *
-   * @method sync
-   * @memberof View
-   * @instance
-   *
-   * @param data {Object} Data for the riot tag, will be extended with the current data
-   * @param {Boolean} [replaceData=false] Indicates the data should be replaced
-   */
-  sync(data = {}, replaceData = false) {
-    return Promise.resolve()
-      .then(() => {
-        mergeIntoData.call(this, data, replaceData);
+    /**
+     * Syncs data to the template
+     *
+     * @todo decide whether we want to re-run middleware when syncing
+     *
+     * @method sync
+     * @memberof View
+     * @instance
+     *
+     * @param data {Object} Data for the riot tag, will be extended with the current data
+     * @param {Boolean} [replaceData=false] Indicates the data should be replaced
+     */
+    sync(data = {}, replaceData = false) {
+      return Promise.resolve()
+        .then(() => {
+          mergeIntoData.call(this, data, replaceData);
 
-        this.adapter.sync(this, this._data);
+          this.adapter.sync(this, this._data);
 
-        if (this.adapter.rebindEventsAfterSync) {
-          if (this.adapter.events === true) {
-            this.adapter.bindEvents(this);
+          if (this.adapter.rebindEventsAfterSync) {
+            if (this.adapter.events === true) {
+              this.adapter.bindEvents(this);
+            }
           }
-        }
 
-        return syncSubViews.call(this);
-      });
-  },
+          return syncSubViews.call(this);
+        });
+    },
 
-  /**
-   * Removes the {@link View}
-   *
-   * @method hide
-   * @memberof View
-   * @instance
-   */
-  remove() {
-    this.adapter.remove(this);
+    /**
+     * Removes the {@link View}
+     *
+     * @method hide
+     * @memberof View
+     * @instance
+     */
+    remove() {
+      this.adapter.remove(this);
+    }
+
   }
 
-};
+});
 
 function ensureSubViews() {
   _.each(this.options.subViews, (options = {}, name) => {

@@ -62,11 +62,11 @@ const Director = FactoryFactory({
     this.currentStaticViews = null;
 
     if (this.options.viewConfig) {
-      View.defaults = this.options.viewConfig;
+      _.extend(View.defaults, this.options.viewConfig);
     }
 
     if (this.options.staticViewConfig) {
-      StaticView.defaults = this.options.staticViewConfig;
+      _.extend(StaticView.defaults, this.options.staticViewConfig);
     }
 
     if (this.options.libraries.riot) {
