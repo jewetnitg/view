@@ -144,7 +144,9 @@ const View = FactoryFactory({
     runMiddleware(data = {}) {
       return this.options.director.middleware.security.run(this.security, data)
         .then(() => {
-          return this.options.director.middleware.data.run(this.data, data, this.sync.bind(this))
+          return this.options.director.middleware.data.run(this.data, data, null, {
+              sync: this.sync.bind(this)
+            })
             .then(null, (err) => {
               // data failed
               return Promise.reject({
