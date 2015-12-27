@@ -4,6 +4,7 @@
 import _ from 'lodash';
 import $ from 'jquery';
 import ObjectWithView from './ObjectWithView';
+import View from './View';
 
 /**
  * @todo document
@@ -14,7 +15,8 @@ const SubView = ObjectWithView.extend({
 
   validate: [
     'parentView',
-    {'holder': 'string'},
+    'name',
+    'holder',
     (options) => {
       if (options.parentView.subViews[options.name]) {
         throw new Error(`Can't construct SubView, SubView with name '${options.name}' already defined.`);
@@ -22,23 +24,11 @@ const SubView = ObjectWithView.extend({
     }
   ],
 
-  prototype: {
+  initialize() {
+    this.options.parentView.subViews[this.options.name] = this;
+  },
 
-    /**
-     * holder selector in the context of the parentView of this {@link SubView}
-     * @todo document
-     * @type jQuery
-     * @name $holder
-     * @memberof SubView
-     * @instance
-     */
-    get $holder() {
-      if (this.holder && this.parentView) {
-        return $(this.holder, this.parentView.el);
-      }
-    }
-
-  }
+  prototype: {}
 
 });
 

@@ -1,4 +1,4 @@
-function ensure(name = "", list = {}, factory, options = {}, existing = {}) {
+function ensure(name = "", list = {}, factory, options = {}, existing = {}, constructor) {
   if (typeof options === 'string') {
     if (existing[options]) {
       return existing[options];
@@ -11,7 +11,9 @@ function ensure(name = "", list = {}, factory, options = {}, existing = {}) {
     }
 
     return factory(opts);
-  } else if (options instanceof View) {
+  } else if (constructor && options instanceof constructor) {
+    return options;
+  } else if (options instanceof factory) {
     return options;
   } else if (!Array.isArray(options) && typeof options === 'object') {
     return factory(options);

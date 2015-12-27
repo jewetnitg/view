@@ -12,25 +12,15 @@ import FactoryFactory from 'frontend-factory';
  */
 const ObjectWithView = FactoryFactory({
 
-  defaults() {
-    return {
-      security: [],
-      data: []
-    }
-  },
+  defaults: {},
 
   validate: [
     {
       name: 'string'
     },
-    'director',
     'view',
     (options) => {
-      if (!(options.holder || options.$holder || options.el)) {
-        throw new Error(`Can't construct ObjectWithView, a holder must be specified.`);
-      }
-
-      if (!options.director.options.views[options.view]) {
+      if (!View.viewOptions[options.view]) {
         throw new Error(`Can't construct ObjectWithView, View with name '${options.view}' is not defined.`);
       }
     }
@@ -59,29 +49,9 @@ const ObjectWithView = FactoryFactory({
      * @todo document
      * @returns {*}
      */
-    get $holder() {
-      if (this.view) {
-        return this.view.$holder;
-      }
-    },
-
-    /**
-     * @todo document
-     * @returns {*}
-     */
     get el() {
       if (this.view) {
         return this.view.el;
-      }
-    },
-
-    /**
-     * @todo document
-     * @returns {*}
-     */
-    get $el() {
-      if (this.view) {
-        return this.view.$el;
       }
     },
 
@@ -92,8 +62,7 @@ const ObjectWithView = FactoryFactory({
      * @memberof ObjectWithView
      * @instance
      *
-     * @param req {Object} Data to merge req with used for the middleware
-     * @param res {Object} Data to merge res with used for the middleware and, when middleware has finished, as data for the template
+     * @param data {Object} Data to render the View with
      * @param {Boolean} [replace=false] Indicates the current data should be replaced instead of being extended (merged) with the data passed in.
      *
      * @returns {Promise}
@@ -107,8 +76,8 @@ const ObjectWithView = FactoryFactory({
      *   // do something
      * });
      */
-    render(req = {}, res = {}, replace = false) {
-      return this.view.render(req, res, replace);
+    render(data = {}, replace = false) {
+      return this.view.render(data, false, replace);
     },
 
     /**
@@ -131,7 +100,7 @@ const ObjectWithView = FactoryFactory({
      * });
      */
     sync(data = {}, replace = false) {
-      return this.view.sync(data, replace);
+      this.view.sync(data, replace);
     },
 
     /**
@@ -180,13 +149,13 @@ const ObjectWithView = FactoryFactory({
 });
 
 function makeViewOptions(options = {}) {
-  const viewImpl = _.defaults(options.director.options.views[options.view], options.director.View.defaults);
+  const viewImpl = _.defaults(View.viewOptions[options.view], View.defaults);
   const viewOptions = _.clone(viewImpl);
 
-  _.extend(viewOptions, _.defaults({}, options, viewOptions, {
-    security: [],
-    data: []
-  }));
+  Object.assign(viewOptions, _.defaults({
+    holder: options.holder,
+    el: options.el
+  }, viewOptions));
 
   if (Array.isArray(viewImpl.security)) {
     viewOptions.security.push.apply(viewOptions.security, viewImpl.security);

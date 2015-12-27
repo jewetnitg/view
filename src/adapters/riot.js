@@ -14,7 +14,7 @@ const riotAdapter = {
 
   name: 'riot',
 
-  render(view, data = {}, $el) {
+  render(view, data = {}, el) {
     let template = view.template;
 
     if (typeof template === 'function') {
@@ -29,14 +29,12 @@ const riotAdapter = {
       throw new Error(`Can't render View ${view.name}, template should be a string or a function that returns a string.`);
     }
 
-    const html = Adapter.emptyTag(template);
-
-    if (!$el) {
-      $el = $(html);
-      $el.appendTo(view.$holder);
+    if (!el) {
+      el = document.createElement(template);
+      view.holder.appendChild(el);
     }
 
-    view.tagInstance = riotAdapter.riot.mount($el[0], template, data)[0];
+    view.tagInstance = riotAdapter.riot.mount(el, template, data)[0];
     return view.tagInstance.root;
   },
 
@@ -46,7 +44,7 @@ const riotAdapter = {
 
   remove(view) {
     view.tagInstance.unmount(true);
-    view.$el.remove();
+    view.el.parentNode.removeChild(view.el);
   }
 
 };

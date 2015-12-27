@@ -1,7 +1,9 @@
 import _ from 'lodash';
-import $ from 'jquery';
-import riot from 'riot/riot+compiler';
+// WebStorm bug
+//noinspection JSDuplicatedDeclaration
+import ensure from '../helpers/ensure';
 import FactoryFactory from 'frontend-factory';
+import Adapter from './Adapter';
 
 /**
  * @class View
@@ -21,58 +23,53 @@ const View = FactoryFactory({
   },
 
   validate: [
+    'name',
     'template',
     'holder',
     'adapter',
-    'director',
     {
       'adapter': 'string'
     },
     (options = {}) => {
       // this will throw an error if the adapter does not exist
-      options.director.ensureAdapter(options.adapter);
+      Adapter.ensure(options.adapter);
 
-      if (!(options.holder && typeof options.holder === 'string') && !(options.$holder && options.$holder.length)) {
+      if (!(options.holder && typeof options.holder === 'string')) {
         throw new Error(`Can't construct view, no holder specified`);
       }
 
-      if (!(options.holder && $(options.holder).length) && !(options.$holder && options.$holder.length)) {
+      if (!(options.holder && document.querySelectorAll(options.holder).length)) {
         throw new Error(`Can't construct view, holder not found in DOM`);
       }
     }
   ],
 
   initialize() {
-    _.extend(this, _.omit(this.options, ['$el']));
+    Object.assign(this,
+      {
+        data: {}
+      },
+      this.options,
+      {
+        adapter: Adapter.ensure(this.options.adapter),
+        subViews: {},
+        holder: typeof this.options.holder === 'string'
+          ? document.querySelector(this.options.holder)
+          : this.options.holder,
+        _private: {
+          elCssDisplay: null
+        }
+      }
+    );
+    View.views[this.options.name] = View.views[this.options.name] || [];
+    View.views[this.options.name].push(this);
 
-    this.adapter = this.options.director.adapters[this.options.adapter];
-    this._data = {};
-    this.subViews = {};
+    if (!View.viewOptions[this.options.name]) {
+      View.viewOptions[this.options.name] = this.options;
+    }
   },
 
   prototype: {
-
-    /**
-     * The root element wrapped in jQuery
-     * @name $el
-     * @memberof View
-     * @instance
-     * @type jQuery|null
-     */
-    get $el() {
-      return this.el ? $(this.el) : null;
-    },
-
-    /**
-     * The holder wrapped in jQuery
-     * @name $holder
-     * @memberof View
-     * @instance
-     * @type jQuery
-     */
-    get $holder() {
-      return $(this.holder);
-    },
 
     /**
      * @todo document
@@ -81,8 +78,8 @@ const View = FactoryFactory({
      */
     SubView(options = {}) {
       options.parentView = this;
-      delete options.$holder;
-      return this.subViews[options.name] = this.options.director.SubView(options);
+      // circular dependency workaround
+      return View.SubView(options);
     },
 
     /**
@@ -90,11 +87,10 @@ const View = FactoryFactory({
      * @method hide
      * @memberof View
      * @instance
-     * @todo call res.destroy
      */
     hide() {
-      if (this.$el) {
-        this.$el.hide();
+      if (this.el) {
+        this.el.style.display = 'none';
       }
     },
 
@@ -105,8 +101,10 @@ const View = FactoryFactory({
      * @instance
      */
     show() {
-      if (this.$el) {
-        this.$el.show();
+      if (this.el) {
+        this._private.elCssDisplay = this._private.elCssDisplay === 'none' ? 'block' : this._private.elCssDisplay;
+
+        this.el.style.display = this._private.elCssDisplay;
       }
     },
 
@@ -117,50 +115,32 @@ const View = FactoryFactory({
      * @memberof View
      * @instance
      *
-     * @param params {Object} Object the params object used in middleware execution is extended with
-     * @param res {Object} Object the res object used in middleware execution is extended with (response data)
-     * @param [force=false] {Boolean} Whether to force a render, by default if already rendered, render reverts to {@link View#sync}.
-     * @param {Boolean} [replaceData=false] Indicates the params should be replaced
-     *
+     * @param data {Object} Data to pass to the template
+     * @param [force=false] {Boolean} Forces a render when normally {@link View#sync} would be used.
+     * @param {Boolean} [replaceData=false] Indicates the params should be replaced.
+     * @param {Boolean} [forceSubViews=false] Same as force, but for {@link SubView}s
+     * @param {Boolean} [replaceSubViewData=false] Same as replaceData, but for {@link SubView}s
      */
-    render(params = {}, res = {}, force = false, replaceData = false) {
+    render(data = {}, force = false, replaceData = false, forceSubViews = false, replaceSubViewData = false) {
       if (!this._rendered || force === true) {
-        return this.runMiddleware(params, res)
-          .then((middlewareData) => {
-            return handleMiddlewareResolveForViewRender.call(this, params, middlewareData, force, replaceData);
-          }, (err) => {
-            return handleMiddlewareRejectForViewRender.call(this, err, params)
-          });
-      } else {
-        return this.sync(params, replaceData)
-          .then(() => {
-            this.show();
-          });
-      }
-    },
+        mergeIntoData.call(this, data, replaceData);
+        let el = this.el && force !== true ? this.el : null;
 
-    /**
-     * @todo document
-     * @param params
-     * @param res
-     */
-    runMiddleware(params = {}, res = {}) {
-      return this.options.director.middleware.security.run(this.security, params, params)
-        .then(() => {
-          res.sync = this.sync.bind(this);
-          return this.options.director.middleware.data.run(this.data, params, params, res)
-            .then(null, (err) => {
-              return Promise.reject({
-                reason: 'data',
-                err
-              });
-            });
-        }, (err) => {
-          return Promise.reject({
-            reason: 'security',
-            err
-          });
-        });
+        this.el = this.adapter.render(this, this.data, el);
+
+        if (this.adapter.events === true) {
+          this.adapter.bindEvents(this);
+        }
+
+        this._private.elCssDisplay = this.el.style.display;
+        this._rendered = true;
+
+        renderSubViews.call(this, data, forceSubViews, replaceSubViewData);
+      } else {
+        this.sync(data, replaceData)
+      }
+
+      this.show();
     },
 
     /**
@@ -174,25 +154,23 @@ const View = FactoryFactory({
      * @param {Boolean} [replaceData=false] Indicates the data should be replaced
      */
     sync(data = {}, replaceData = false) {
-      return Promise.resolve()
-        .then(() => {
-          mergeIntoData.call(this, data, replaceData);
+      mergeIntoData.call(this, data, replaceData);
 
-          this.adapter.sync(this, this._data);
+      this.adapter.sync(this, this.data);
 
-          if (this.adapter.rebindEventsAfterSync && this.adapter.events === true) {
-            this.adapter.bindEvents(this);
-          }
+      if (this.adapter.rebindEventsAfterSync && this.adapter.events === true) {
+        this.adapter.bindEvents(this);
+      }
 
-          return syncSubViews.call(this);
-        });
+      _.each(this.subViews, (subView) => {
+        subView.sync(data, replaceData)
+      });
     },
 
     /**
      * Removes the {@link View}
      *
-     * @todo call res.destroy
-     * @method hide
+     * @method remove
      * @memberof View
      * @instance
      */
@@ -212,71 +190,56 @@ const View = FactoryFactory({
 
 });
 
-function renderSubViews(req, data, force, replaceData = false) {
+View.viewOptions = {};
+View.views = {};
+
+View.ensure = function (options = {}) {
+  return ensure('View', View.viewOptions, View, options);
+};
+
+View.register = function (options = {}) {
+  _.defaults(options, View.defaults);
+  // @todo uncomment once implemented in Factory
+  //Factory.validate(View.validate, options)
+  return View.viewOptions[options.name] = options;
+};
+
+function renderSubViews(data, force, replaceData = false) {
   ensureSubViews.call(this);
-  return Promise.all(
-    _.map(this.subViews, (subView) => {
-      return subView.render(req, data, force, replaceData);
-    })
-  );
+
+  _.each(this.subViews, (subView) => {
+    if (typeof subView.options.holder === 'string') {
+      subView.view.holder = this.el.querySelector(subView.options.holder) || this.el;
+    }
+
+    subView.render(data, force, replaceData);
+  });
 }
 
 function ensureSubViews() {
   _.each(this.options.subViews, (options = {}, name) => {
     options.name = options.name || name;
-
-    if (!this.subViews[options.name]) {
+    if (options.name && !this.subViews[options.name]) {
       this.SubView(options);
     }
   });
-}
-
-function syncSubViews(data, replaceData = false) {
-  return Promise.all(
-    _.map(this.subViews, (subView) => {
-      return subView.sync(data, replaceData)
-    })
-  );
-}
-
-function handleMiddlewareResolveForViewRender(req, middlewareData, force, replaceData = false) {
-  mergeIntoData.call(this, middlewareData, replaceData);
-  let $el = this.el && force !== true ? $(this.el) : null;
-
-  this.el = this.adapter.render(this, this._data, $el);
-
-  if (this.adapter.events === true) {
-    this.adapter.bindEvents(this);
-  }
-
-  this._rendered = true;
-
-  return renderSubViews.call(this, req, middlewareData, force, replaceData);
 }
 
 function mergeIntoData(...data) {
   const replaceData = data.pop();
   const args = data;
 
-  if (replaceData === true) {
-    this._data = {};
+  if (typeof replaceData === 'boolean') {
+    if (replaceData) {
+      this.data = {};
+    }
+  } else {
+    args.push(replaceData);
   }
 
-  args.unshift(this._data);
+  args.unshift(this.data);
 
   return _.merge.apply(data, args);
-}
-
-function handleMiddlewareRejectForViewRender(err, data) {
-  this.hide();
-
-  if (err.reason === 'data') {
-    // log for tech support
-    console.error(`Data middleware failed for View '${this.name}'.`, this, data, err);
-  } else if (err.reason !== 'security') {
-    // throw log for tech support / bugs
-    throw err;
-  }
 }
 
 export default View;

@@ -13,9 +13,13 @@ const reactAdapter = {
 
   name: 'react',
 
-  render(view, data = {}, $el) {
-    if ($el) {
-      $el.remove();
+  viewDefaults: {
+    holder: '.current-view > .react'
+  },
+
+  render(view, data = {}, el) {
+    if (el) {
+      el.parentNode.removeChild(el);
     }
 
     this.sync(view, data);
@@ -25,7 +29,7 @@ const reactAdapter = {
 
   sync(view, data = {}) {
     view.reactElement = reactAdapter.React.createElement(view.template, data);
-    view.el = reactAdapter.ReactDOM.findDOMNode(reactAdapter.ReactDOM.render(view.reactElement, view.$holder[0]));
+    view.el = reactAdapter.ReactDOM.findDOMNode(reactAdapter.ReactDOM.render(view.reactElement, view.holder));
   },
 
   remove(view) {

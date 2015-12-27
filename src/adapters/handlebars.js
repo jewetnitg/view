@@ -14,9 +14,9 @@ const handlebarsAdapter = {
   events: true,
   rebindEventsAfterSync: true,
 
-  render(view, data = {}, $el) {
-    if ($el) {
-      $el.remove();
+  render(view, data = {}, el) {
+    if (el) {
+      el.parentNode.removeChild(el);
     }
 
     this.sync(view, data);
@@ -28,16 +28,14 @@ const handlebarsAdapter = {
     this.remove(view);
 
     const html = view.template(data);
-    const $el = $(html);
 
-    $el.appendTo(view.$holder);
-
-    view.el = $el[0];
+    view.holder.insertAdjacentHTML('afterbegin', html);
+    view.el = view.holder.childNodes[0];
   },
 
   remove(view) {
-    if (view.$el) {
-      view.$el.remove();
+    if (view.el) {
+      view.el.parentNode.removeChild(view.el);
     }
   }
 

@@ -3,7 +3,7 @@
  */
 import index from './index';
 
-const globalName = 'Director';
+const globalName = 'ViewDirector';
 
 if (typeof window.define == 'function' && window.define.amd) {
   window.define(globalName, function () {
