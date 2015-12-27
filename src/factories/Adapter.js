@@ -63,7 +63,7 @@ const Adapter = FactoryFactory({
     sync(view, data = {}) {
       // fallback, sync should really be overridden
       this.remove(view);
-      return this.render(view, data, view.el);
+      this.render(view, data, view.el);
     },
 
     /**
@@ -78,7 +78,6 @@ const Adapter = FactoryFactory({
     remove(view) {
       // fallback, remove may be overridden
       view.el.parentNode.removeChild(view.el);
-      view.el = null;
     },
 
     /**
@@ -90,11 +89,13 @@ const Adapter = FactoryFactory({
      */
     bindEvent(view, event, eventHandler, selector) {
       if (view.el) {
-        if (selector) {
-          view.el.querySelector(selector).addEventListener(event, eventHandler);
-        } else {
-          view.el.addEventListener(event, eventHandler);
+        const el = selector ? view.el.querySelector(selector) : view.el;
+
+        if (!el) {
+          throw new Error(`Can't bind '${event}' event listener, element not found.`);
         }
+
+        el.addEventListener(event, eventHandler);
       }
     },
 

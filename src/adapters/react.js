@@ -5,7 +5,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 
 /**
- *
+ * @todo document
  * @name reactAdapter
  * @extends Adapter
  */
@@ -34,7 +34,7 @@ const reactAdapter = {
 
   remove(view) {
     view.reactElement = null;
-    reactAdapter.ReactDOM.unmountComponentAtNode(view.$el.parent()[0]);
+    reactAdapter.ReactDOM.unmountComponentAtNode(view.el.parentNode);
   }
 
 };

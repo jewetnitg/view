@@ -190,13 +190,27 @@ const View = FactoryFactory({
 
 });
 
+/**
+ * @todo document
+ */
 View.viewOptions = {};
+/**
+ * @todo document
+ */
 View.views = {};
 
+/**
+ * @todo document
+ * @param options
+ */
 View.ensure = function (options = {}) {
   return ensure('View', View.viewOptions, View, options);
 };
 
+/**
+ * @todo document
+ * @param options
+ */
 View.register = function (options = {}) {
   _.defaults(options, View.defaults);
   // @todo uncomment once implemented in Factory

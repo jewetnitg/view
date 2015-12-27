@@ -5,6 +5,7 @@ import Handlebars from 'hbsfy/runtime';
 
 /**
  *
+ * @todo document
  * @name handlebarsAdapter
  * @extends Adapter
  */

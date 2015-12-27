@@ -2,7 +2,6 @@
  * @author rik
  */
 import _ from 'lodash';
-import $ from 'jquery';
 import ObjectWithView from './ObjectWithView';
 import View from './View';
 
