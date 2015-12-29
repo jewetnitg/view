@@ -12,6 +12,7 @@ View.SubView = SubView;
 
 export {
   View as View,
+  SubView as SubView,
   Adapter as Adapter,
   ObjectWithView as ObjectWithView,
   riotAdapter as riotAdapter,

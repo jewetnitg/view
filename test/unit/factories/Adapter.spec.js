@@ -1,7 +1,7 @@
 /**
  * @author rik
  */
-import Adapter from '../../src/factories/Adapter';
+import Adapter from '../../../src/factories/Adapter';
 
 /**
  * Adapter
@@ -15,11 +15,6 @@ describe(`Adapter`, () => {
     }
   };
 
-  it(`should be a function`, (done) => {
-    expect(Adapter).to.be.a('function');
-    done();
-  });
-
   beforeEach(done => {
     adapterName = 'test';
     baseAdapter = {
@@ -29,6 +24,11 @@ describe(`Adapter`, () => {
       }
     };
     Adapter.adapters = {};
+    done();
+  });
+
+  it(`should be a function`, (done) => {
+    expect(Adapter).to.be.a('function');
     done();
   });
 

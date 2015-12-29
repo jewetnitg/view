@@ -15,9 +15,6 @@ const ObjectWithView = FactoryFactory({
   defaults: {},
 
   validate: [
-    {
-      name: 'string'
-    },
     'view',
     (options) => {
       if (!View.viewOptions[options.view]) {
@@ -28,9 +25,13 @@ const ObjectWithView = FactoryFactory({
 
   initialize() {
     //noinspection JSUnusedAssignment
-    _.extend(this, _.omit(this.options, _.keys(ObjectWithView.prototype).push('view')));
+    const toBeOmittedKeys = _.keys(ObjectWithView.prototype);
+    toBeOmittedKeys.push('view');
+
+    _.extend(this, _.omit(this.options, toBeOmittedKeys));
+
+    // @todo document
     this.view = View(makeViewOptions(this.options));
-    this.view.owner = this;
   },
 
   prototype: {
@@ -63,7 +64,7 @@ const ObjectWithView = FactoryFactory({
      * @instance
      *
      * @param data {Object} Data to render the View with
-     * @param {Boolean} [replace=false] Indicates the current data should be replaced instead of being extended (merged) with the data passed in.
+     * @param {Boolean} [force=false] Indicates the render should be forced, normally rendering a rendered View reverts to syncing it.
      *
      * @returns {Promise}
      *
@@ -76,17 +77,16 @@ const ObjectWithView = FactoryFactory({
      *   // do something
      * });
      */
-    render(data = {}, replace = false) {
-      return this.view.render(data, false, replace);
+    render(data = {}, force = false) {
+      return this.view.render(data, force);
     },
 
     /**
-     * Syncs data to the {@link View}, data will be merged into the current data unless the replace argument is set to true.
+     * Syncs data to the {@link View}, data will be merged into the current data
      *
      * @method sync
      * @memberof ObjectWithView
      * @param data {Object} The data that has to be synced to the view.
-     * @param {Boolean} [replace=false] Indicates the current data should be replaced instead of being extended (merged) with the data passed in.
      *
      * @returns {Promise}
      *
@@ -99,8 +99,8 @@ const ObjectWithView = FactoryFactory({
      *   // do something
      * });
      */
-    sync(data = {}, replace = false) {
-      this.view.sync(data, replace);
+    sync(data = {}) {
+      this.view.sync(data);
     },
 
     /**
@@ -150,20 +150,13 @@ const ObjectWithView = FactoryFactory({
 
 function makeViewOptions(options = {}) {
   const viewImpl = _.defaults(View.viewOptions[options.view], View.defaults);
+  // clone so we don't change the original
   const viewOptions = _.clone(viewImpl);
 
   Object.assign(viewOptions, _.defaults({
     holder: options.holder,
     el: options.el
   }, viewOptions));
-
-  if (Array.isArray(viewImpl.security)) {
-    viewOptions.security.push.apply(viewOptions.security, viewImpl.security);
-  }
-
-  if (Array.isArray(viewImpl.data)) {
-    viewOptions.data.push.apply(viewOptions.data, viewImpl.data);
-  }
 
   return viewOptions;
 }

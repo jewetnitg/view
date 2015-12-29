@@ -135,6 +135,10 @@ Adapter.adapters = {};
 
 /**
  * @todo document
+ * @todo refactor out ensure
+ * @name ensure
+ * @memberof Adapter
+ * @static
  * @param options {Object}
  */
 Adapter.ensure = function (options = {}) {

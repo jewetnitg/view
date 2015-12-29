@@ -1,3 +1,4 @@
+// @todo refactor out
 function ensure(name = "", list = {}, factory, options = {}, existing = {}, constructor) {
   if (typeof options === 'string') {
     if (existing[options]) {
