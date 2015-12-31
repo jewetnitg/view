@@ -2,6 +2,9 @@
  * @author rik
  */
 var browserify = require('browserify');
+
+var buffer = require('vinyl-buffer');
+var uglify = require('gulp-uglify');
 var source = require('vinyl-source-stream');
 
 var packageJson = require('../package.json');
@@ -21,6 +24,8 @@ module.exports = function (gulp) {
         this.emit('end');
       })
       .pipe(source('main.js'))
+      .pipe(buffer())
+      .pipe(uglify())
       .pipe(gulp.dest('./build/dst'));
   }
 };

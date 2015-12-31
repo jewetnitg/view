@@ -1,20 +1,44 @@
-/**
- * @author rik
- */
-import index from './index';
+import {
+  View,
+  SubView,
+  Adapter,
+  ObjectWithView,
+  riotAdapter,
+  reactAdapter,
+  handlebarsAdapter
+} from './index';
 
-const globalName = 'ViewDirector';
+import riot from 'riot';
 
 if (typeof window.define == 'function' && window.define.amd) {
-  window.define(globalName, function () {
-    return index;
+  window.define('View', function () {
+    return View;
+  });
+  window.define('Adapter', function () {
+    return Adapter;
+  });
+  window.define('ObjectWithView', function () {
+    return ObjectWithView;
+  });
+  window.define('riotAdapter', function () {
+    return riotAdapter;
+  });
+  window.define('reactAdapter', function () {
+    return reactAdapter;
+  });
+  window.define('handlebarsAdapter', function () {
+    return handlebarsAdapter;
   });
   window.define('riot', function () {
-    return index.riot;
+    return riot;
   });
 } else {
-  window[globalName] = index;
-  window.riot = index.riot;
+  window['View'] = View;
+  window['Adapter'] = Adapter;
+  window['riotAdapter'] = riotAdapter;
+  window['reactAdapter'] = reactAdapter;
+  window['handlebarsAdapter'] = handlebarsAdapter;
+  window.riot = riot;
 }
 
 export default index;

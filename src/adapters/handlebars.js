@@ -1,6 +1,3 @@
-/**
- * @author rik
- */
 import Handlebars from 'hbsfy/runtime';
 
 /**

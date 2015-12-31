@@ -13,14 +13,49 @@ import ensure from '../helpers/ensure';
  *
  * @param options {Object} Object containing the properties listed below
  *
- * @property name {String}
- * @property {Boolean} [rebindEventsAfterSync=true]
- * @property {Boolean} [events=true]
- * @property render {Function<HTMLElement>}
- * @property [sync=Adapter#sync] {Function}
- * @property [remove=Adapter#remove] {Function}
+ * @property name {String} The name of the {@link Adapter}
+ * @property {Boolean} [rebindEventsAfterSync=true] If true, indicates this Adapter needs to rebind events after a sync, because they were lost in the process
+ * @property {Boolean} [events=true] If true, indicates this Adapter supports event listeners
+ * @property render {Function} This function is in charge of creating a {@link View}s element
+ * @property [sync=Adapter#sync] {Function} This function is in charge of syncing data to a {@link View}s element
+ * @property [remove=Adapter#remove] {Function} This function is in charge of removing a {@link View}s element from the DOM
  *
  * @class Adapter
+ * @example
+ * const handlebarsAdapter = {
+ *
+ *   name: 'handlebars',
+ *   events: true,
+ *   rebindEventsAfterSync: true,
+ *
+ *   render(view, data = {}, el) {
+ *     if (el) {
+ *       el.parentNode.removeChild(el);
+ *     }
+ *
+ *     this.sync(view, data);
+ *
+ *     return view.el;
+ *   },
+ *
+ *   sync(view, data = {}) {
+ *     this.remove(view);
+ *
+ *     const html = view.template(data);
+ *
+ *     view.holder.insertAdjacentHTML('afterbegin', html);
+ *     view.el = view.holder.childNodes[0];
+ *   },
+ *
+ *   remove(view) {
+ *     if (view.el) {
+ *       view.el.parentNode.removeChild(view.el);
+ *     }
+ *   }
+ *
+ * };
+ *
+ * export default handlebarsAdapter;
  */
 const Adapter = FactoryFactory({
 
@@ -81,11 +116,21 @@ const Adapter = FactoryFactory({
     },
 
     /**
-     * @todo document
-     * @param view
-     * @param event
-     * @param eventHandler
-     * @param selector
+     * Binds a single event DOM event listener for a View.
+     * This method may be overridden.
+     *
+     * @method bindEvent
+     * @memberof Adapter
+     * @instance
+     *
+     * @param view {View} View to bind the event for
+     * @param event {String} The event to bind
+     * @param eventHandler {Function} Function that should be called when the event occurs
+     * @param selector {String} DOM selector of the element to listen to (relative to View.el)
+     *
+     * @example
+     * const view = View({...});
+     * view.bindEvent(view, 'click', function(ev){...}, '.some-element-inside-the-provided-view');
      */
     bindEvent(view, event, eventHandler, selector) {
       if (view.el) {
@@ -100,8 +145,13 @@ const Adapter = FactoryFactory({
     },
 
     /**
-     * @todo document
-     * @param view
+     * Calls bindEvent for every event in the provided views events.
+     *
+     * @method bindEvents
+     * @memberof Adapter
+     * @instance
+     *
+     * @param view {View} The {@link View} of which events should be bound
      */
     bindEvents(view) {
       _.each(view.events, (eventHandler, eventAndSelector) => {
